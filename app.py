@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Camuflaje CSS Monocromático (Negro / Gris oscuro idéntico a Excel modo oscuro)
+# Camuflaje CSS Verde Excel Online (incluye corrección del color rojo en pestañas activas)
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -26,69 +26,63 @@ st.markdown("""
         max-width: 100% !important;
     }
     .excel-top {
-        background-color: #1f1f1f;
-        color: #e0e0e0;
+        background-color: #107c41;
+        color: white;
         font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 12px;
         padding: 5px 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #333333;
     }
     .excel-ribbon {
         font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 12px;
-        color: #d0d0d0;
-        background-color: #2b2b2b;
-        border-bottom: 1px solid #3d3d3d;
+        color: #333;
+        background-color: #f3f2f1;
+        border-bottom: 1px solid #e1dfdd;
         padding: 4px 12px;
         display: flex;
         gap: 18px;
     }
-    .excel-fx {
-        font-family: 'Segoe UI', Consolas, monospace;
-        font-size: 12px;
-        background-color: #1f1f1f;
-        color: #d4d4d4;
-        border-bottom: 1px solid #3d3d3d;
-        padding: 4px 10px;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .fx-cell-box {
-        background-color: #2b2b2b;
-        border: 1px solid #555555;
-        padding: 1px 24px 1px 8px;
-        border-radius: 3px;
-        color: #ffffff;
+    .excel-toolbar {
+        font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 11.5px;
+        color: #444;
+        background-color: #faf9f8;
+        border-bottom: 1px solid #d2d0ce;
+        padding: 4px 12px;
+        display: flex;
+        gap: 14px;
+        align-items: center;
     }
-    .fx-icons {
-        background-color: #2b2b2b;
-        border: 1px solid #444444;
+    .excel-box {
+        border: 1px solid #c8c6c4;
+        background: white;
         padding: 1px 8px;
-        border-radius: 3px;
-        color: #aaaaaa;
-        font-style: italic;
+        font-size: 11px;
     }
-    .fx-bar {
-        background-color: #2b2b2b;
-        border: 1px solid #444444;
-        padding: 2px 10px;
-        border-radius: 3px;
-        flex-grow: 1;
-        color: #dcdcdc;
+    .excel-fx {
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        background-color: #ffffff;
+        border: 1px solid #d2d0ce;
+        padding: 3px 10px;
+        margin-bottom: 6px;
+        color: #333;
     }
     button[data-baseweb="tab"] {
         font-family: 'Segoe UI', Calibri, sans-serif !important;
         font-size: 12.5px !important;
         padding: 4px 14px !important;
+        color: #444444 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #107c41 !important;
+        font-weight: 600 !important;
     }
     div[data-baseweb="tab-highlight"] {
-        background-color: #555555 !important;
+        background-color: #107c41 !important;
     }
     div[data-testid="stExpander"] summary p {
         font-family: 'Segoe UI', Calibri, sans-serif !important;
@@ -99,19 +93,19 @@ st.markdown("""
         font-family: Calibri, sans-serif;
         font-size: 12.5px;
         color: #333;
-        border: 1px solid #c8c6c4;
+        border: 1px solid #d2d0ce;
         padding: 8px 12px;
         margin-top: 6px;
-        background-color: #ffffff;
+        background-color: #faf9f8;
     }
 </style>
 <div class="excel-top">
-    <span><b>Libro1.xlsx</b> &nbsp; - &nbsp; Excel</span>
-    <span>— &nbsp;&nbsp; □ &nbsp;&nbsp; ✕</span>
+    <span><b>Excel</b> &nbsp;&nbsp;|&nbsp;&nbsp; Libro1.xlsx &nbsp; <span style="opacity:0.85; font-size:11px;">✓ Guardado en OneDrive</span></span>
+    <span>Compartir &nbsp;&nbsp; Comentarios</span>
 </div>
 <div class="excel-ribbon">
     <span>Archivo</span>
-    <span style="border-bottom: 2px solid #ffffff; color: #ffffff; font-weight: 600;">Inicio</span>
+    <span style="border-bottom: 2px solid #107c41; font-weight: 600; color: #107c41;">Inicio</span>
     <span>Insertar</span>
     <span>Disposición de página</span>
     <span>Fórmulas</span>
@@ -119,10 +113,18 @@ st.markdown("""
     <span>Revisar</span>
     <span>Vista</span>
 </div>
+<div class="excel-toolbar">
+    <span>Deshacer</span> |
+    <span class="excel-box">Calibri &nbsp; ▾</span>
+    <span class="excel-box">11 &nbsp; ▾</span> |
+    <span><b>N</b> &nbsp; <i>K</i> &nbsp; <u>S</u></span> |
+    <span>Alinear ▾ &nbsp; Ajustar texto</span> |
+    <span class="excel-box">Contabilidad &nbsp; ▾</span>
+    <span><b>$</b> &nbsp; <b>%</b> &nbsp; <b>000</b></span> |
+    <span>Autosuma ∑</span>
+</div>
 <div class="excel-fx">
-    <span class="fx-cell-box">A1 &nbsp;&nbsp; ⌄</span>
-    <span class="fx-icons">✕ &nbsp; ✓ &nbsp; fx</span>
-    <span class="fx-bar">=SUMA(C13:C20)</span>
+    <b>C21</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i>fx</i> &nbsp; =SUMA(C13:C20)
 </div>
 """, unsafe_allow_html=True)
 
@@ -459,7 +461,6 @@ def generar_excel_monocromatico():
     wb = openpyxl.Workbook()
     wb.calculation.fullCalcOnLoad = True
 
-    # Estilo 100% monocromático (sin colores azules, solo negrita y bordes simples)
     font_bold = Font(name="Calibri", size=11, bold=True, color="000000")
     font_reg = Font(name="Calibri", size=11, bold=False, color="000000")
     border_bottom = Border(bottom=Side(style="thin", color="000000"))
