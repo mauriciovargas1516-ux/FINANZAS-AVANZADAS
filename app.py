@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import io
 
@@ -12,64 +12,75 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Camuflaje CSS estilo Excel Online (Verde corporativo #107c41, barra de herramientas y sin botones llamativos)
+# Camuflaje CSS Monocromático (Negro / Gris oscuro idéntico a Excel modo oscuro)
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
     .block-container {
-        padding-top: 0.2rem !important;
+        padding-top: 0.1rem !important;
         padding-bottom: 1rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
         max-width: 100% !important;
     }
     .excel-top {
-        background-color: #107c41;
-        color: white;
+        background-color: #1f1f1f;
+        color: #e0e0e0;
         font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 12px;
         padding: 5px 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border-bottom: 1px solid #333333;
     }
     .excel-ribbon {
         font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 12px;
-        color: #333;
-        background-color: #f3f2f1;
-        border-bottom: 1px solid #e1dfdd;
+        color: #d0d0d0;
+        background-color: #2b2b2b;
+        border-bottom: 1px solid #3d3d3d;
         padding: 4px 12px;
         display: flex;
         gap: 18px;
     }
-    .excel-toolbar {
-        font-family: 'Segoe UI', Calibri, sans-serif;
-        font-size: 11.5px;
-        color: #444;
-        background-color: #faf9f8;
-        border-bottom: 1px solid #d2d0ce;
-        padding: 4px 12px;
-        display: flex;
-        gap: 14px;
-        align-items: center;
-    }
-    .excel-box {
-        border: 1px solid #c8c6c4;
-        background: white;
-        padding: 1px 8px;
-        font-size: 11px;
-    }
     .excel-fx {
-        font-family: Consolas, monospace;
+        font-family: 'Segoe UI', Consolas, monospace;
         font-size: 12px;
-        background-color: #ffffff;
-        border: 1px solid #d2d0ce;
-        padding: 3px 10px;
+        background-color: #1f1f1f;
+        color: #d4d4d4;
+        border-bottom: 1px solid #3d3d3d;
+        padding: 4px 10px;
         margin-bottom: 6px;
-        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .fx-cell-box {
+        background-color: #2b2b2b;
+        border: 1px solid #555555;
+        padding: 1px 24px 1px 8px;
+        border-radius: 3px;
+        color: #ffffff;
+        font-size: 11.5px;
+    }
+    .fx-icons {
+        background-color: #2b2b2b;
+        border: 1px solid #444444;
+        padding: 1px 8px;
+        border-radius: 3px;
+        color: #aaaaaa;
+        font-style: italic;
+    }
+    .fx-bar {
+        background-color: #2b2b2b;
+        border: 1px solid #444444;
+        padding: 2px 10px;
+        border-radius: 3px;
+        flex-grow: 1;
+        color: #dcdcdc;
     }
     button[data-baseweb="tab"] {
         font-family: 'Segoe UI', Calibri, sans-serif !important;
@@ -77,7 +88,7 @@ st.markdown("""
         padding: 4px 14px !important;
     }
     div[data-baseweb="tab-highlight"] {
-        background-color: #107c41 !important;
+        background-color: #555555 !important;
     }
     div[data-testid="stExpander"] summary p {
         font-family: 'Segoe UI', Calibri, sans-serif !important;
@@ -88,19 +99,19 @@ st.markdown("""
         font-family: Calibri, sans-serif;
         font-size: 12.5px;
         color: #333;
-        border: 1px solid #d2d0ce;
+        border: 1px solid #c8c6c4;
         padding: 8px 12px;
         margin-top: 6px;
-        background-color: #faf9f8;
+        background-color: #ffffff;
     }
 </style>
 <div class="excel-top">
-    <span><b>Excel</b> &nbsp;&nbsp;|&nbsp;&nbsp; Libro1.xlsx &nbsp; <span style="opacity:0.8; font-size:11px;">✓ Guardado en OneDrive</span></span>
-    <span>Compartir &nbsp;&nbsp; Comentarios</span>
+    <span><b>Libro1.xlsx</b> &nbsp; - &nbsp; Excel</span>
+    <span>— &nbsp;&nbsp; □ &nbsp;&nbsp; ✕</span>
 </div>
 <div class="excel-ribbon">
     <span>Archivo</span>
-    <span style="border-bottom: 2px solid #107c41; font-weight: 600;">Inicio</span>
+    <span style="border-bottom: 2px solid #ffffff; color: #ffffff; font-weight: 600;">Inicio</span>
     <span>Insertar</span>
     <span>Disposición de página</span>
     <span>Fórmulas</span>
@@ -108,18 +119,10 @@ st.markdown("""
     <span>Revisar</span>
     <span>Vista</span>
 </div>
-<div class="excel-toolbar">
-    <span>Deshacer</span> |
-    <span class="excel-box">Calibri &nbsp; ▾</span>
-    <span class="excel-box">11 &nbsp; ▾</span> |
-    <span><b>N</b> &nbsp; <i>K</i> &nbsp; <u>S</u></span> |
-    <span>Alinear ▾ &nbsp; Ajustar texto</span> |
-    <span class="excel-box">Contabilidad &nbsp; ▾</span>
-    <span><b>$</b> &nbsp; <b>%</b> &nbsp; <b>000</b></span> |
-    <span>Autosuma ∑</span>
-</div>
 <div class="excel-fx">
-    <b>C21</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i>fx</i> &nbsp; =SUMA(C13:C20)
+    <span class="fx-cell-box">A1 &nbsp;&nbsp; ⌄</span>
+    <span class="fx-icons">✕ &nbsp; ✓ &nbsp; fx</span>
+    <span class="fx-bar">=SUMA(C13:C20)</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -226,7 +229,6 @@ else:
         "Crec. Costos Fijos (%)": [0.0, 3.0, 3.0, 3.0, 3.0, 3.0]
     })
 
-# Opciones avanzadas discretas en la barra lateral izquierda
 base_credito = st.sidebar.selectbox("Base Crédito", ["Inv. Bruta", "Inv. Neta"])
 descuento_fcl = st.sidebar.selectbox("Tasa Descuento FCL", ["Ke", "WACC"])
 incluir_prestamo_fci0 = st.sidebar.checkbox("Sumar Préstamo en Año 0 FCI", value=True)
@@ -240,9 +242,8 @@ with st.sidebar.expander("Calculadora CAPM (Opcional)"):
     capm_res = rf_val + beta_val * (rm_val - rf_val)
     st.caption(f"Ke (CAPM) = {capm_res:.2f}%")
 
-# Panel de grillas de entrada (100% tablas tipo Excel, sin botones - / + ni selectores rojos)
-with st.expander("Celdas de Parámetros y Supuestos (Clic para mostrar/ocultar)", expanded=False):
-    st.caption("1. Parámetros Financieros Generales")
+with st.expander("Celdas de Entrada y Supuestos (Clic para mostrar/ocultar)", expanded=False):
+    st.caption("1. Parámetros Financieros")
     params_df = st.data_editor(def_params, use_container_width=True, hide_index=True)
 
     horizonte = max(1, int(params_df.iloc[0]["Horizonte (años)"]))
@@ -289,14 +290,12 @@ with st.expander("Celdas de Parámetros y Supuestos (Clic para mostrar/ocultar)"
 
     tasas_df = st.data_editor(tasas_init, use_container_width=True, hide_index=True)
 
-# Procesamiento de datos operacionales Año 1
 r_op = op_df.iloc[0]
 ing_bruto_o_neto = (float(r_op["Unidades A1 (opcional)"]) * float(r_op["Precio A1 ($)"])) if usar_q_por_p else float(r_op["Ingresos A1 ($)"])
 ing_base_neto = ing_bruto_o_neto / 1.19 if "Bruto" in str(r_op["Moneda Ing."]) else ing_bruto_o_neto
 cv_base_neto = float(r_op["CV Total A1 ($)"]) / 1.19 if "Bruto" in str(r_op["Moneda CV"]) else float(r_op["CV Total A1 ($)"])
 cf_base_neto = float(r_op["CF Total A1 ($)"]) / 1.19 if "Bruto" in str(r_op["Moneda CF"]) else float(r_op["CF Total A1 ($)"])
 
-# Procesamiento de inversiones
 inv_processed = []
 for _, row in inv_df.iterrows():
     monto_raw = float(row["Monto"] or 0.0)
@@ -311,24 +310,24 @@ for _, row in inv_df.iterrows():
     dep_anual = base_dep / vida if bool(row["Depreciable"]) else 0.0
     amort_anual = val_neto / vida if bool(row["Intangible"]) else 0.0
     inv_processed.append({
-        "Ítem": row["Ítem"],
-        "Valor Neto": val_neto,
-        "IVA (19%)": val_iva,
-        "Valor Bruto": val_bruto,
-        "Valor Rescate": rescate,
-        "Depreciación Anual": dep_anual,
-        "Amortización Anual": amort_anual,
-        "Vida Útil": vida,
+        "Ítem": str(row["Ítem"]),
+        "Valor Neto": float(val_neto),
+        "IVA (19%)": float(val_iva),
+        "Valor Bruto": float(val_bruto),
+        "Valor Rescate": float(rescate),
+        "Depreciación Anual": float(dep_anual),
+        "Amortización Anual": float(amort_anual),
+        "Vida Útil": int(vida),
         "Es CT": bool(row["Cap. Trabajo"])
     })
 df_inv_calc = pd.DataFrame(inv_processed)
 
-total_inv_neta = df_inv_calc["Valor Neto"].sum()
-total_inv_bruta = df_inv_calc["Valor Bruto"].sum()
-total_rescate_af = df_inv_calc[~df_inv_calc["Es CT"]]["Valor Rescate"].sum()
-total_recup_ct = df_inv_calc[df_inv_calc["Es CT"]]["Valor Neto"].sum()
-dep_anual_total = df_inv_calc["Depreciación Anual"].sum()
-amort_anual_total = df_inv_calc["Amortización Anual"].sum()
+total_inv_neta = float(df_inv_calc["Valor Neto"].sum())
+total_inv_bruta = float(df_inv_calc["Valor Bruto"].sum())
+total_rescate_af = float(df_inv_calc[~df_inv_calc["Es CT"]]["Valor Rescate"].sum())
+total_recup_ct = float(df_inv_calc[df_inv_calc["Es CT"]]["Valor Neto"].sum())
+dep_anual_total = float(df_inv_calc["Depreciación Anual"].sum())
+amort_anual_total = float(df_inv_calc["Amortización Anual"].sum())
 
 base_prestamo_val = total_inv_bruta if "Bruta" in base_credito else total_inv_neta
 monto_credito = base_prestamo_val * pct_deuda * (1.0 + gasto_credito_pct)
@@ -341,9 +340,9 @@ for idx, r_row in tasas_df.iterrows():
         curr_i *= (1.0 + float(r_row["Crec. Ingresos (%)"]) / 100.0)
         curr_v *= (1.0 + float(r_row["Crec. Costos Var. (%)"]) / 100.0)
         curr_f *= (1.0 + float(r_row["Crec. Costos Fijos (%)"]) / 100.0)
-    ing_series.append(curr_i)
-    cv_series.append(curr_v)
-    cf_series.append(curr_f)
+    ing_series.append(float(curr_i))
+    cv_series.append(float(curr_v))
+    cf_series.append(float(curr_f))
 
 amort_rows = []
 saldo = monto_credito
@@ -358,8 +357,8 @@ for t in range(1, horizonte + 1):
         c_val = cuota_anual
     else:
         interes, amort_cap, c_val = 0.0, 0.0, 0.0
-    intereses_anuales.append(interes)
-    amort_deuda_anuales.append(amort_cap)
+    intereses_anuales.append(float(interes))
+    amort_deuda_anuales.append(float(amort_cap))
     amort_rows.append({"Período": t, "Cuota": round(c_val), "Interés": round(interes), "Amortización": round(amort_cap), "Saldo": round(saldo)})
 
 df_amort = pd.DataFrame(amort_rows)
@@ -445,114 +444,140 @@ decision_fcl = "ACEPTAR" if van_fcl >= 0 and tir_fcl > tasa_fcl_usada else "RECH
 decision_fci = "ACEPTAR" if van_fci >= 0 and tir_fci > tasa_ke else "RECHAZAR"
 
 texto_interp_fcl = (
-    f"Celda Resumen FCL: VAN = ${van_fcl:,.0f} (Tasa {tasa_fcl_usada*100:.2f}%) | TIR = {tir_fcl*100:.2f}% | Payback = {pb_fcl}. "
-    f"El proyecto recupera la inversión neta (${total_inv_neta:,.0f}), cubre el costo de oportunidad del capital y genera un excedente de riqueza de ${abs(van_fcl):,.0f}. "
+    f"Conclusión FCL: VAN = ${van_fcl:,.0f} (Tasa {tasa_fcl_usada*100:.2f}%) | TIR = {tir_fcl*100:.2f}% | Payback = {pb_fcl}. "
+    f"El proyecto recupera la inversión neta (${total_inv_neta:,.0f}), cubre el costo de oportunidad del capital y genera riqueza neta por ${abs(van_fcl):,.0f}. "
     f"Decisión: {decision_fcl} (VAN >= 0 y TIR > Tasa exigida)."
 )
 
 texto_interp_fci = (
-    f"Celda Resumen Inversionista: Préstamo = ${monto_credito:,.0f} ({pct_deuda*100:.0f}% Inv., Kd {tasa_kd*100:.2f}%, {plazo_deuda} años, Cuota PAGO = ${cuota_anual:,.0f}) | "
+    f"Conclusión Inversionista: Préstamo = ${monto_credito:,.0f} ({pct_deuda*100:.0f}% Inv., Kd {tasa_kd*100:.2f}%, {plazo_deuda} años, Cuota PAGO = ${cuota_anual:,.0f}) | "
     f"VAN FCI = ${van_fci:,.0f} (Ke {tasa_ke*100:.2f}%) | TIR FCI = {tir_fci*100:.2f}% | Payback = {pb_fci}. "
-    f"El apalancamiento financiero positivo y el ahorro tributario de los intereses ({tasa_imp*100:.1f}%) elevan la rentabilidad sobre los recursos propios. Decisión: {decision_fci}."
+    f"El apalancamiento financiero y el escudo fiscal de los intereses ({tasa_imp*100:.1f}%) incrementan la rentabilidad sobre el capital propio. Decisión: {decision_fci}."
 )
 
-def generar_excel_formulas():
+def generar_excel_monocromatico():
     wb = openpyxl.Workbook()
-    font_title = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    fill_title = PatternFill("solid", fgColor="1F4E78")
-    font_bold = Font(name="Calibri", size=10, bold=True)
-    fill_sub = PatternFill("solid", fgColor="D9E1F2")
-    fill_total = PatternFill("solid", fgColor="EDEDED")
+    wb.calculation.fullCalcOnLoad = True
+
+    # Estilo 100% monocromático (sin colores azules, solo negrita y bordes simples)
+    font_bold = Font(name="Calibri", size=11, bold=True, color="000000")
+    font_reg = Font(name="Calibri", size=11, bold=False, color="000000")
+    border_bottom = Border(bottom=Side(style="thin", color="000000"))
+    border_total = Border(top=Side(style="thin", color="000000"), bottom=Side(style="double", color="000000"))
     num_fmt_curr = "#,##0;(#,##0);\"-\""
     num_fmt_pct = "0.00%"
 
     ws1 = wb.active
-    ws1.title = "1_Supuestos_Inversion"
-    ws1["B2"] = "PARÁMETROS Y SUPUESTOS DEL PROYECTO"
-    ws1["B2"].font = font_title
-    ws1["B2"].fill = fill_title
+    ws1.title = "Hoja1"
+    ws1["B2"] = "Parámetros y Supuestos"
+    ws1["B2"].font = font_bold
+    ws1["B2"].border = border_bottom
 
     params = [
-        ("Horizonte (años)", horizonte, "0"),
-        ("Tasa de Impuesto", tasa_imp, num_fmt_pct),
-        ("Tasa Costo de Capital (Ke)", tasa_ke, num_fmt_pct),
-        ("Tasa Crédito Bancario (Kd)", tasa_kd, num_fmt_pct),
-        ("% Financiamiento Deuda", pct_deuda, num_fmt_pct),
-        ("Plazo del Crédito (años)", plazo_deuda, "0"),
-        ("Tasa IVA", IVA_RATE, num_fmt_pct),
+        ("Horizonte (años)", int(horizonte), "0"),
+        ("Impuesto", float(tasa_imp), num_fmt_pct),
+        ("Costo Capital (Ke)", float(tasa_ke), num_fmt_pct),
+        ("Tasa Deuda (Kd)", float(tasa_kd), num_fmt_pct),
+        ("% Deuda", float(pct_deuda), num_fmt_pct),
+        ("Plazo Crédito (años)", int(plazo_deuda), "0"),
+        ("IVA", float(IVA_RATE), num_fmt_pct),
     ]
     for i, (label, val, fmt) in enumerate(params, start=3):
         ws1[f"B{i}"] = label
+        ws1[f"B{i}"].font = font_reg
         ws1[f"C{i}"] = val
+        ws1[f"C{i}"].font = font_reg
         ws1[f"C{i}"].number_format = fmt
+
     ws1["B10"] = "WACC"
     ws1["B10"].font = font_bold
     ws1["C10"] = "=C5*(1-C7)+C6*(1-C4)*C7"
     ws1["C10"].number_format = num_fmt_pct
     ws1["C10"].font = font_bold
 
-    ws1["B12"] = "DETALLE DE INVERSIONES, AJUSTE DE IVA Y DEPRECIACIÓN"
-    ws1["B12"].font = font_title
-    ws1["B12"].fill = fill_title
+    ws1["B12"] = "Inversiones y Depreciación"
+    ws1["B12"].font = font_bold
 
-    headers_inv = ["Ítem de Inversión", "Valor Neto", "IVA (19%)", "Valor Bruto", "Vida Útil", "Valor Rescate", "Depreciación Anual", "Amortización Anual"]
+    headers_inv = ["Ítem", "Valor Neto", "IVA (19%)", "Valor Bruto", "Vida Útil", "Valor Rescate", "Depreciación Anual", "Amortización Anual"]
     for col_idx, h in enumerate(headers_inv, start=2):
         cell = ws1.cell(13, col_idx, h)
         cell.font = font_bold
-        cell.fill = fill_sub
+        cell.border = border_bottom
 
     start_inv_row = 14
     for idx, r in df_inv_calc.iterrows():
         curr_r = start_inv_row + idx
-        ws1.cell(curr_r, 2, r["Ítem"])
-        ws1.cell(curr_r, 3, r["Valor Neto"]).number_format = num_fmt_curr
-        ws1.cell(curr_r, 4, f"=C{curr_r}*$C$9" if r["IVA (19%)"] > 0 else 0).number_format = num_fmt_curr
-        ws1.cell(curr_r, 5, f"=C{curr_r}+D{curr_r}").number_format = num_fmt_curr
-        ws1.cell(curr_r, 6, r["Vida Útil"])
-        ws1.cell(curr_r, 7, r["Valor Rescate"]).number_format = num_fmt_curr
+        ws1.cell(curr_r, 2, str(r["Ítem"])).font = font_reg
+        c_net = ws1.cell(curr_r, 3, float(r["Valor Neto"]))
+        c_net.number_format = num_fmt_curr
+        c_net.font = font_reg
+
+        c_iva = ws1.cell(curr_r, 4, f"=C{curr_r}*$C$9" if r["IVA (19%)"] > 0 else 0)
+        c_iva.number_format = num_fmt_curr
+        c_iva.font = font_reg
+
+        c_bru = ws1.cell(curr_r, 5, f"=C{curr_r}+D{curr_r}")
+        c_bru.number_format = num_fmt_curr
+        c_bru.font = font_reg
+
+        c_vid = ws1.cell(curr_r, 6, int(r["Vida Útil"]))
+        c_vid.font = font_reg
+
+        c_res = ws1.cell(curr_r, 7, float(r["Valor Rescate"]))
+        c_res.number_format = num_fmt_curr
+        c_res.font = font_reg
+
         form_dep = f"=(C{curr_r}-G{curr_r})/F{curr_r}" if restar_rescate_dep else f"=C{curr_r}/F{curr_r}"
-        ws1.cell(curr_r, 8, form_dep if r["Depreciación Anual"] > 0 else 0).number_format = num_fmt_curr
-        ws1.cell(curr_r, 9, f"=C{curr_r}/F{curr_r}" if r["Amortización Anual"] > 0 else 0).number_format = num_fmt_curr
+        c_dep = ws1.cell(curr_r, 8, form_dep if r["Depreciación Anual"] > 0 else 0)
+        c_dep.number_format = num_fmt_curr
+        c_dep.font = font_reg
+
+        c_amo = ws1.cell(curr_r, 9, f"=C{curr_r}/F{curr_r}" if r["Amortización Anual"] > 0 else 0)
+        c_amo.number_format = num_fmt_curr
+        c_amo.font = font_reg
 
     tot_inv_row = start_inv_row + len(df_inv_calc)
-    ws1.cell(tot_inv_row, 2, "TOTALES").font = font_bold
+    c_tot_lbl = ws1.cell(tot_inv_row, 2, "Total")
+    c_tot_lbl.font = font_bold
+    c_tot_lbl.border = border_total
+
     for col_i in [3, 4, 5, 7, 8, 9]:
         col_let = get_column_letter(col_i)
         c_tot = ws1.cell(tot_inv_row, col_i, f"=SUM({col_let}{start_inv_row}:{col_let}{tot_inv_row-1})")
         c_tot.font = font_bold
-        c_tot.fill = fill_total
+        c_tot.border = border_total
         c_tot.number_format = num_fmt_curr
 
     loan_row = tot_inv_row + 2
-    ws1.cell(loan_row, 2, "Monto del Préstamo a Solicitar").font = font_bold
+    ws1.cell(loan_row, 2, "Préstamo").font = font_bold
     base_col_let = "E" if "Bruta" in base_credito else "C"
-    ws1.cell(loan_row, 3, f"={base_col_let}{tot_inv_row}*C7*(1+{gasto_credito_pct})").number_format = num_fmt_curr
-    ws1.cell(loan_row, 3).font = font_bold
+    c_loan = ws1.cell(loan_row, 3, f"={base_col_let}{tot_inv_row}*C7*(1+{gasto_credito_pct})")
+    c_loan.number_format = num_fmt_curr
+    c_loan.font = font_bold
 
-    ws3 = wb.create_sheet("3_Tabla_Amortizacion")
-    ws3["B2"] = "CÁLCULO DE CRÉDITO Y TABLA DE AMORTIZACIÓN"
-    ws3["B2"].font = font_title
-    ws3["B2"].fill = fill_title
+    ws3 = wb.create_sheet("Hoja3")
+    ws3["B2"] = "Tabla de Amortización"
+    ws3["B2"].font = font_bold
 
-    ws3["B4"] = "Monto del Crédito"
-    ws3["C4"] = f"='1_Supuestos_Inversion'!C{loan_row}"
+    ws3["B4"] = "Monto Crédito"
+    ws3["C4"] = f"=Hoja1!C{loan_row}"
     ws3["C4"].number_format = num_fmt_curr
-    ws3["B5"] = "Tasa de Interés Anual"
-    ws3["C5"] = "='1_Supuestos_Inversion'!C6"
+    ws3["B5"] = "Tasa Anual (Kd)"
+    ws3["C5"] = "=Hoja1!C6"
     ws3["C5"].number_format = num_fmt_pct
     ws3["B6"] = "Plazo (Años)"
-    ws3["C6"] = "='1_Supuestos_Inversion'!C8"
-    ws3["B7"] = "Cuota Anual Fija (PAGO)"
+    ws3["C6"] = "=Hoja1!C8"
+    ws3["B7"] = "Cuota Fija"
     ws3["B7"].font = font_bold
     ws3["C7"] = "=PMT(C5,C6,-C4)"
     ws3["C7"].font = font_bold
     ws3["C7"].number_format = num_fmt_curr
 
-    headers_amo = ["Período", "Cuota", "Interés", "Amortización", "Saldo Insoluto"]
+    headers_amo = ["Período", "Cuota", "Interés", "Amortización", "Saldo"]
     for idx, h in enumerate(headers_amo, start=2):
         c = ws3.cell(9, idx, h)
         c.font = font_bold
-        c.fill = fill_sub
+        c.border = border_bottom
 
     ws3.cell(10, 2, 0)
     ws3.cell(10, 6, "=C4").number_format = num_fmt_curr
@@ -574,57 +599,59 @@ def generar_excel_formulas():
             c_item.number_format = num_fmt_curr
 
     def poblar_hoja_flujo(ws, es_inversionista=False):
-        titulo = "FLUJO DE CAJA DEL INVERSIONISTA (FCI)" if es_inversionista else "FLUJO DE CAJA LIBRE (FCL)"
+        titulo = "Flujo de Caja Inversionista" if es_inversionista else "Flujo de Caja Libre"
         ws["B2"] = titulo
-        ws["B2"].font = font_title
-        ws["B2"].fill = fill_title
+        ws["B2"].font = font_bold
 
-        ws.cell(4, 2, "Concepto / Año").font = font_bold
-        ws.cell(4, 2).fill = fill_sub
+        c_hdr = ws.cell(4, 2, "Ítem / Año")
+        c_hdr.font = font_bold
+        c_hdr.border = border_bottom
         for t in range(horizonte + 1):
             c = ws.cell(4, 3 + t, t)
             c.font = font_bold
-            c.fill = fill_sub
+            c.border = border_bottom
             c.alignment = Alignment(horizontal="right")
 
         filas_labels = [
-            (5, "(+) Ingresos por Ventas"),
+            (5, "(+) Ingresos"),
             (6, "(-) Costos Variables"),
-            (7, "(-) Costos Fijos / Egresos Op."),
+            (7, "(-) Costos Fijos"),
             (8, "(-) Depreciación"),
             (9, "(-) Amortización Intangibles"),
-            (10, "(-) Intereses del Préstamo" if es_inversionista else "(-) Intereses (No aplica)"),
-            (11, "(=) Utilidad Antes de Impuestos (BAI)"),
-            (12, "(-) Impuesto a la Renta (29,5%)"),
-            (13, "(=) Utilidad Después de Impuestos (BDI)"),
+            (10, "(-) Intereses Deuda"),
+            (11, "(=) BAI"),
+            (12, "(-) Impuesto (29,5%)"),
+            (13, "(=) BDI"),
             (14, "(+) Depreciación"),
             (15, "(+) Amortización Intangibles"),
             (16, "(-) Inversión Inicial"),
-            (17, "(+) Préstamo Recibido" if es_inversionista else "(+) Préstamo (No aplica)"),
-            (18, "(-) Amortización de la Deuda" if es_inversionista else "(-) Amortización (No aplica)"),
-            (19, "(+) Valor de Rescate Activos Fijos"),
-            (20, "(+) Recuperación Capital de Trabajo"),
-            (21, "(=) FLUJO DE CAJA NETO"),
-            (22, "Factor de Actualización"),
-            (23, "Flujo de Caja Actualizado (VP)"),
-            (24, "Flujo de Caja Acumulado (Payback)")
+            (17, "(+) Préstamo"),
+            (18, "(-) Amortización Deuda"),
+            (19, "(+) Valor Rescate"),
+            (20, "(+) Recup. Capital Trabajo"),
+            (21, "(=) FLUJO CAJA NETO"),
+            (22, "Factor Actualización"),
+            (23, "Flujo Actualizado"),
+            (24, "Flujo Acumulado")
         ]
         for r_num, lbl in filas_labels:
             cell_lbl = ws.cell(r_num, 2, lbl)
-            if r_num in [11, 13, 21]:
-                cell_lbl.font = font_bold
-                cell_lbl.fill = fill_total
+            cell_lbl.font = font_bold if r_num in [11, 13, 21] else font_reg
+            if r_num == 21:
+                cell_lbl.border = border_total
 
-        ws.cell(16, 3, f"=-'1_Supuestos_Inversion'!C{tot_inv_row}").number_format = num_fmt_curr
+        ws.cell(16, 3, f"=-Hoja1!C{tot_inv_row}").number_format = num_fmt_curr
         if es_inversionista and incluir_prestamo_fci0:
-            ws.cell(17, 3, "='3_Tabla_Amortizacion'!C4").number_format = num_fmt_curr
+            ws.cell(17, 3, "=Hoja3!C4").number_format = num_fmt_curr
         else:
             ws.cell(17, 3, 0).number_format = num_fmt_curr
-        ws.cell(21, 3, "=SUM(C13:C20)").font = font_bold
-        ws.cell(21, 3).fill = fill_total
-        ws.cell(21, 3).number_format = num_fmt_curr
 
-        tasa_ref = "'1_Supuestos_Inversion'!$C$5" if (es_inversionista or "Ke" in descuento_fcl) else "'1_Supuestos_Inversion'!$C$10"
+        c_fn0 = ws.cell(21, 3, "=SUM(C13:C20)")
+        c_fn0.font = font_bold
+        c_fn0.border = border_total
+        c_fn0.number_format = num_fmt_curr
+
+        tasa_ref = "Hoja1!$C$5" if (es_inversionista or "Ke" in descuento_fcl) else "Hoja1!$C$10"
         ws.cell(22, 3, f"=(1/(1+{tasa_ref}))^C4").number_format = "0.0000"
         ws.cell(23, 3, "=C21*C22").number_format = num_fmt_curr
         ws.cell(24, 3, "=C21").number_format = num_fmt_curr
@@ -638,44 +665,44 @@ def generar_excel_formulas():
             g_cf = float(tasas_df.iloc[t-1]["Crec. Costos Fijos (%)"]) / 100.0
 
             if t == 1:
-                ws.cell(5, col_i, ing_series[0])
-                ws.cell(6, col_i, -cv_series[0])
-                ws.cell(7, col_i, -cf_series[0])
+                ws.cell(5, col_i, float(ing_series[0]))
+                ws.cell(6, col_i, float(-cv_series[0]))
+                ws.cell(7, col_i, float(-cf_series[0]))
             else:
                 ws.cell(5, col_i, f"={prev_let}5*(1+{g_ing})")
                 ws.cell(6, col_i, f"={prev_let}6*(1+{g_cv})")
                 ws.cell(7, col_i, f"={prev_let}7*(1+{g_cf})")
 
-            ws.cell(8, col_i, f"=-'1_Supuestos_Inversion'!$H${tot_inv_row}")
-            ws.cell(9, col_i, f"=-'1_Supuestos_Inversion'!$I${tot_inv_row}")
+            ws.cell(8, col_i, f"=-Hoja1!$H${tot_inv_row}")
+            ws.cell(9, col_i, f"=-Hoja1!$I${tot_inv_row}")
             if es_inversionista:
-                ws.cell(10, col_i, f"=-'3_Tabla_Amortizacion'!D{10+t}")
+                ws.cell(10, col_i, f"=-Hoja3!D{10+t}")
             else:
                 ws.cell(10, col_i, 0)
 
             ws.cell(11, col_i, f"=SUM({col_let}5:{col_let}10)").font = font_bold
-            ws.cell(11, col_i).fill = fill_total
-            ws.cell(12, col_i, f"=-{col_let}11*'1_Supuestos_Inversion'!$C$4")
+            ws.cell(12, col_i, f"=-{col_let}11*Hoja1!$C$4")
             ws.cell(13, col_i, f"=SUM({col_let}11:{col_let}12)").font = font_bold
-            ws.cell(13, col_i).fill = fill_total
             ws.cell(14, col_i, f"=-{col_let}8")
             ws.cell(15, col_i, f"=-{col_let}9")
             ws.cell(16, col_i, 0)
             ws.cell(17, col_i, 0)
             if es_inversionista:
-                ws.cell(18, col_i, f"=-'3_Tabla_Amortizacion'!E{10+t}")
+                ws.cell(18, col_i, f"=-Hoja3!E{10+t}")
             else:
                 ws.cell(18, col_i, 0)
 
             if t == horizonte:
-                ws.cell(19, col_i, total_rescate_af)
-                ws.cell(20, col_i, total_recup_ct)
+                ws.cell(19, col_i, float(total_rescate_af))
+                ws.cell(20, col_i, float(total_recup_ct))
             else:
                 ws.cell(19, col_i, 0)
                 ws.cell(20, col_i, 0)
 
-            ws.cell(21, col_i, f"=SUM({col_let}13:{col_let}20)").font = font_bold
-            ws.cell(21, col_i).fill = fill_total
+            c_fnt = ws.cell(21, col_i, f"=SUM({col_let}13:{col_let}20)")
+            c_fnt.font = font_bold
+            c_fnt.border = border_total
+
             ws.cell(22, col_i, f"=(1/(1+{tasa_ref}))^{col_let}4").number_format = "0.0000"
             ws.cell(23, col_i, f"={col_let}21*{col_let}22")
             ws.cell(24, col_i, f"={prev_let}24+{col_let}21")
@@ -686,37 +713,36 @@ def generar_excel_formulas():
             ws.cell(24, col_i).number_format = num_fmt_curr
 
         last_let = get_column_letter(3 + horizonte)
-        ws.cell(26, 2, "VAN (Suma Flujos Actualizados)").font = font_bold
+        ws.cell(26, 2, "VAN (Suma VP)").font = font_bold
         ws.cell(26, 3, f"=SUM(C23:{last_let}23)").font = font_bold
         ws.cell(26, 3).number_format = num_fmt_curr
 
-        ws.cell(27, 2, "VAN (Con Función VNA / NPV)").font = font_bold
+        ws.cell(27, 2, "VAN (VNA)").font = font_bold
         ws.cell(27, 3, f"=C21+NPV({tasa_ref},D21:{last_let}21)").font = font_bold
         ws.cell(27, 3).number_format = num_fmt_curr
 
-        ws.cell(28, 2, "TIR (Con Función TIR / IRR)").font = font_bold
+        ws.cell(28, 2, "TIR").font = font_bold
         ws.cell(28, 3, f"=IRR(C21:{last_let}21)").font = font_bold
         ws.cell(28, 3).number_format = num_fmt_pct
 
-        ws.cell(29, 2, "Periodo de Recuperación (Payback)").font = font_bold
+        ws.cell(29, 2, "Payback").font = font_bold
         ws.cell(29, 3, pb_fci if es_inversionista else pb_fcl).font = font_bold
 
-        ws.cell(31, 2, "INTERPRETACIÓN Y RECOMENDACIÓN FINANCIERA:").font = font_bold
-        ws.cell(31, 2).fill = fill_sub
-        ws.merge_cells(start_row=32, start_column=2, end_row=35, end_column=3 + horizonte)
+        ws.cell(31, 2, "Respuesta:").font = font_bold
+        ws.merge_cells(start_row=32, start_column=2, end_row=34, end_column=3 + horizonte)
         c_interp = ws.cell(32, 2, texto_interp_fci if es_inversionista else texto_interp_fcl)
         c_interp.alignment = Alignment(wrap_text=True, vertical="top")
 
-    ws2 = wb.create_sheet("2_Flujo_Caja_Libre")
+    ws2 = wb.create_sheet("Hoja2")
     poblar_hoja_flujo(ws2, es_inversionista=False)
 
-    ws4 = wb.create_sheet("4_Flujo_Inversionista")
+    ws4 = wb.create_sheet("Hoja4")
     poblar_hoja_flujo(ws4, es_inversionista=True)
 
     wb._sheets = [ws1, ws2, ws3, ws4]
 
     for sheet in wb.worksheets:
-        sheet.column_dimensions["B"].width = 38
+        sheet.column_dimensions["B"].width = 34
         for col_i in range(3, 15):
             sheet.column_dimensions[get_column_letter(col_i)].width = 16
 
@@ -724,9 +750,8 @@ def generar_excel_formulas():
     wb.save(output)
     return output.getvalue()
 
-excel_bytes = generar_excel_formulas()
+excel_bytes = generar_excel_monocromatico()
 
-# Barra de estado discreta y exportación directa a Excel
 top_left, top_right = st.columns([5.5, 1])
 with top_left:
     st.caption(
@@ -742,7 +767,6 @@ with top_right:
         use_container_width=True
     )
 
-# Hojas inferiores estilo libro de cálculo
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Hoja1 (FCL)",
     "Hoja2 (Amortización)",
