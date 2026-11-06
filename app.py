@@ -7,84 +7,126 @@ from openpyxl.utils import get_column_letter
 import io
 
 st.set_page_config(
-    page_title="Libro1.xlsx",
+    page_title="Libro1.xlsx - Excel",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# CSS para camuflar Streamlit como una hoja de cálculo sobria
+# Camuflaje CSS estilo Excel Online (Verde corporativo #107c41, barra de herramientas y sin botones llamativos)
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
     .block-container {
-        padding-top: 0.8rem !important;
+        padding-top: 0.2rem !important;
         padding-bottom: 1rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
         max-width: 100% !important;
+    }
+    .excel-top {
+        background-color: #107c41;
+        color: white;
+        font-family: 'Segoe UI', Calibri, sans-serif;
+        font-size: 12px;
+        padding: 5px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .excel-ribbon {
         font-family: 'Segoe UI', Calibri, sans-serif;
         font-size: 12px;
-        color: #a0a0a0;
-        border-bottom: 1px solid #333;
-        padding: 4px 8px;
-        margin-bottom: 6px;
+        color: #333;
+        background-color: #f3f2f1;
+        border-bottom: 1px solid #e1dfdd;
+        padding: 4px 12px;
         display: flex;
         gap: 18px;
+    }
+    .excel-toolbar {
+        font-family: 'Segoe UI', Calibri, sans-serif;
+        font-size: 11.5px;
+        color: #444;
+        background-color: #faf9f8;
+        border-bottom: 1px solid #d2d0ce;
+        padding: 4px 12px;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+    }
+    .excel-box {
+        border: 1px solid #c8c6c4;
+        background: white;
+        padding: 1px 8px;
+        font-size: 11px;
     }
     .excel-fx {
         font-family: Consolas, monospace;
         font-size: 12px;
-        background-color: rgba(128, 128, 128, 0.1);
-        border: 1px solid rgba(128, 128, 128, 0.25);
-        padding: 4px 10px;
-        margin-bottom: 10px;
-        color: #bbb;
+        background-color: #ffffff;
+        border: 1px solid #d2d0ce;
+        padding: 3px 10px;
+        margin-bottom: 6px;
+        color: #333;
     }
-    h1, h2, h3, h4 {
+    button[data-baseweb="tab"] {
         font-family: 'Segoe UI', Calibri, sans-serif !important;
-        font-weight: 500 !important;
-        font-size: 14px !important;
-        margin-top: 4px !important;
-        margin-bottom: 4px !important;
+        font-size: 12.5px !important;
+        padding: 4px 14px !important;
+    }
+    div[data-baseweb="tab-highlight"] {
+        background-color: #107c41 !important;
     }
     div[data-testid="stExpander"] summary p {
-        font-size: 13px !important;
+        font-family: 'Segoe UI', Calibri, sans-serif !important;
+        font-size: 12.5px !important;
         font-weight: 400 !important;
     }
     .nota-celda {
         font-family: Calibri, sans-serif;
         font-size: 12.5px;
-        color: #9e9e9e;
-        border: 1px solid rgba(128, 128, 128, 0.25);
+        color: #333;
+        border: 1px solid #d2d0ce;
         padding: 8px 12px;
         margin-top: 6px;
-        background-color: rgba(128, 128, 128, 0.05);
+        background-color: #faf9f8;
     }
 </style>
+<div class="excel-top">
+    <span><b>Excel</b> &nbsp;&nbsp;|&nbsp;&nbsp; Libro1.xlsx &nbsp; <span style="opacity:0.8; font-size:11px;">✓ Guardado en OneDrive</span></span>
+    <span>Compartir &nbsp;&nbsp; Comentarios</span>
+</div>
 <div class="excel-ribbon">
-    <span><b>Archivo</b></span>
-    <span>Inicio</span>
+    <span>Archivo</span>
+    <span style="border-bottom: 2px solid #107c41; font-weight: 600;">Inicio</span>
     <span>Insertar</span>
     <span>Disposición de página</span>
-    <span><b>Fórmulas</b></span>
+    <span>Fórmulas</span>
     <span>Datos</span>
     <span>Revisar</span>
     <span>Vista</span>
 </div>
+<div class="excel-toolbar">
+    <span>Deshacer</span> |
+    <span class="excel-box">Calibri &nbsp; ▾</span>
+    <span class="excel-box">11 &nbsp; ▾</span> |
+    <span><b>N</b> &nbsp; <i>K</i> &nbsp; <u>S</u></span> |
+    <span>Alinear ▾ &nbsp; Ajustar texto</span> |
+    <span class="excel-box">Contabilidad &nbsp; ▾</span>
+    <span><b>$</b> &nbsp; <b>%</b> &nbsp; <b>000</b></span> |
+    <span>Autosuma ∑</span>
+</div>
 <div class="excel-fx">
-    <b>C21</b> &nbsp;|&nbsp; <i>fx</i> &nbsp; =SUMA(C13:C20)
+    <b>C21</b> &nbsp;&nbsp;|&nbsp;&nbsp; <i>fx</i> &nbsp; =SUMA(C13:C20)
 </div>
 """, unsafe_allow_html=True)
 
 IVA_RATE = 0.19
 
-# Selector discreto en barra lateral o en panel plegable superior
 plantilla = st.sidebar.selectbox(
-    "Caso base",
+    "Plantilla",
     [
         "Caso 1 - Estructura J (120M)",
         "Caso 2 - Guia P2 (130M)",
@@ -94,171 +136,152 @@ plantilla = st.sidebar.selectbox(
 )
 
 if "Caso 1" in plantilla:
-    def_horizonte = 6
-    def_tax = 29.5
-    def_ke = 13.0
-    def_kd = 6.5
-    def_pct_deuda = 30.0
-    def_plazo_deuda = 5
-    def_gasto_credito = 0.0
+    def_params = pd.DataFrame([{
+        "Horizonte (años)": 6, "Impuesto (%)": 29.5, "Ke (%)": 13.0,
+        "% Deuda": 30.0, "Kd (%)": 6.5, "Plazo Créd.": 5, "Gasto Créd. (%)": 0.0
+    }])
     def_inv = pd.DataFrame([
-        {"Ítem": "Máquina nueva", "Monto": 120000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 45000000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Puesta en marcha (instalaciones)", "Monto": 12000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Pruebas de producción (ajustes)", "Monto": 7000000.0, "Tipo Moneda": "Bruto (dividir 1.19)", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Capacitación mano de obra", "Monto": 7000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Capital de trabajo", "Monto": 36000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": True},
+        {"Ítem": "Máquina nueva", "Monto": 120000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 45000000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Puesta en marcha (instalaciones)", "Monto": 12000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Pruebas de producción (ajustes)", "Monto": 7000000.0, "Moneda": "Bruto (/1.19)", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Capacitación mano de obra", "Monto": 7000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Capital de trabajo", "Monto": 36000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": True},
     ])
-    def_ing_a1 = 190000000.0
-    def_ing_tipo = "Bruto (dividir 1.19)"
-    def_cv_a1 = 38000.0 * (700.0 + 300.0 + 450.0)
-    def_cv_tipo = "Neto"
-    def_cf_a1 = 5300000.0
-    def_cf_tipo = "Bruto (dividir 1.19)"
+    def_op_base = pd.DataFrame([{
+        "Unidades A1 (opcional)": 38000.0, "Precio A1 ($)": 5000.0, "Ingresos A1 ($)": 190000000.0, "Moneda Ing.": "Bruto (/1.19)",
+        "CV Total A1 ($)": 55100000.0, "Moneda CV": "Neto", "CF Total A1 ($)": 5300000.0, "Moneda CF": "Bruto (/1.19)"
+    }])
     def_tasas = pd.DataFrame({
         "Año": [1, 2, 3, 4, 5, 6],
         "Crec. Ingresos (%)": [0.0, 4.5, 4.5, 4.5, 4.5, 4.5],
-        "Crec. Costos Variables (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "Crec. Costos Var. (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         "Crec. Costos Fijos (%)": [0.0, 6.0, 6.0, 3.0, 3.0, 3.0]
     })
 
 elif "Caso 2" in plantilla:
-    def_horizonte = 6
-    def_tax = 29.5
-    def_ke = 13.0
-    def_kd = 7.5
-    def_pct_deuda = 30.0
-    def_plazo_deuda = 5
-    def_gasto_credito = 0.0
+    def_params = pd.DataFrame([{
+        "Horizonte (años)": 6, "Impuesto (%)": 29.5, "Ke (%)": 13.0,
+        "% Deuda": 30.0, "Kd (%)": 7.5, "Plazo Créd.": 5, "Gasto Créd. (%)": 0.0
+    }])
     def_inv = pd.DataFrame([
-        {"Ítem": "Máquina nueva", "Monto": 130000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 55000000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Gastos puesta en marcha", "Monto": 14000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Pruebas de producción", "Monto": 6000000.0, "Tipo Moneda": "Bruto (dividir 1.19)", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Capacitación mano de obra", "Monto": 7000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Capital de trabajo", "Monto": 35000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": True},
+        {"Ítem": "Máquina nueva", "Monto": 130000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 55000000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Gastos puesta en marcha", "Monto": 14000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Pruebas de producción", "Monto": 6000000.0, "Moneda": "Bruto (/1.19)", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Capacitación mano de obra", "Monto": 7000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Capital de trabajo", "Monto": 35000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": True},
     ])
-    def_ing_a1 = 190000000.0
-    def_ing_tipo = "Bruto (dividir 1.19)"
-    def_cv_a1 = 0.0
-    def_cv_tipo = "Neto"
-    def_cf_a1 = 60400000.0
-    def_cf_tipo = "Neto"
+    def_op_base = pd.DataFrame([{
+        "Unidades A1 (opcional)": 1.0, "Precio A1 ($)": 190000000.0, "Ingresos A1 ($)": 190000000.0, "Moneda Ing.": "Bruto (/1.19)",
+        "CV Total A1 ($)": 0.0, "Moneda CV": "Neto", "CF Total A1 ($)": 60400000.0, "Moneda CF": "Neto"
+    }])
     def_tasas = pd.DataFrame({
         "Año": [1, 2, 3, 4, 5, 6],
         "Crec. Ingresos (%)": [0.0, 4.5, 4.5, 4.5, 4.5, 4.5],
-        "Crec. Costos Variables (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "Crec. Costos Var. (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         "Crec. Costos Fijos (%)": [0.0, 6.0, 6.0, 3.0, 3.0, 3.0]
     })
 
 elif "Caso 3" in plantilla:
-    def_horizonte = 5
-    def_tax = 29.5
-    def_ke = 13.0
-    def_kd = 8.5
-    def_pct_deuda = 30.0
-    def_plazo_deuda = 4
-    def_gasto_credito = 2.0
+    def_params = pd.DataFrame([{
+        "Horizonte (años)": 5, "Impuesto (%)": 29.5, "Ke (%)": 13.0,
+        "% Deuda": 30.0, "Kd (%)": 8.5, "Plazo Créd.": 4, "Gasto Créd. (%)": 2.0
+    }])
     def_inv = pd.DataFrame([
-        {"Ítem": "Maquinaria y equipos", "Monto": 13000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 3250000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Implementos de prod.", "Monto": 1800000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 450000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Terrenos", "Monto": 3000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": False, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 750000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Implementos oficina", "Monto": 2000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 500000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Vehículo", "Monto": 8000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 2000000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Construcción", "Monto": 7500000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 1875000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Gastos org. y puesta en marcha", "Monto": 1000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 0.0, "Intangible": True, "Capital Trabajo": False},
-        {"Ítem": "Capital de trabajo", "Monto": 1100000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": True},
+        {"Ítem": "Maquinaria y equipos", "Monto": 13000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 3250000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Implementos de prod.", "Monto": 1800000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 450000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Terrenos", "Monto": 3000000.0, "Moneda": "Neto", "IVA Créd": False, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 750000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Implementos oficina", "Monto": 2000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 500000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Vehículo", "Monto": 8000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 2000000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Construcción", "Monto": 7500000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 5, "Valor Rescate ($)": 1875000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Gastos org. y puesta en marcha", "Monto": 1000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 0.0, "Intangible": True, "Cap. Trabajo": False},
+        {"Ítem": "Capital de trabajo", "Monto": 1100000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 5, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": True},
     ])
-    def_ing_a1 = 38000000.0
-    def_ing_tipo = "Neto"
-    def_cv_a1 = 17100840.34
-    def_cv_tipo = "Neto"
-    def_cf_a1 = 7460000.0
-    def_cf_tipo = "Neto"
+    def_op_base = pd.DataFrame([{
+        "Unidades A1 (opcional)": 50000.0, "Precio A1 ($)": 760.0, "Ingresos A1 ($)": 38000000.0, "Moneda Ing.": "Neto",
+        "CV Total A1 ($)": 17100840.34, "Moneda CV": "Neto", "CF Total A1 ($)": 7460000.0, "Moneda CF": "Neto"
+    }])
     def_tasas = pd.DataFrame({
         "Año": [1, 2, 3, 4, 5],
-        "Crec. Ingresos (%)": [0.0]*5,
-        "Crec. Costos Variables (%)": [0.0]*5,
-        "Crec. Costos Fijos (%)": [0.0]*5
+        "Crec. Ingresos (%)": [0.0, 20.0, 13.3333, 2.9412, 2.8571],
+        "Crec. Costos Var. (%)": [0.0, 20.0, 13.3333, 2.9412, 2.8571],
+        "Crec. Costos Fijos (%)": [0.0, 1.0724, -5.0398, 20.3911, 0.0]
     })
 else:
-    def_horizonte = 6
-    def_tax = 29.5
-    def_ke = 13.0
-    def_kd = 6.5
-    def_pct_deuda = 30.0
-    def_plazo_deuda = 5
-    def_gasto_credito = 0.0
+    def_params = pd.DataFrame([{
+        "Horizonte (años)": 6, "Impuesto (%)": 29.5, "Ke (%)": 13.0,
+        "% Deuda": 30.0, "Kd (%)": 6.5, "Plazo Créd.": 5, "Gasto Créd. (%)": 0.0
+    }])
     def_inv = pd.DataFrame([
-        {"Ítem": "Activo Fijo", "Monto": 100000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 20000000.0, "Intangible": False, "Capital Trabajo": False},
-        {"Ítem": "Capital de Trabajo", "Monto": 20000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": True},
+        {"Ítem": "Activo Principal", "Monto": 100000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 20000000.0, "Intangible": False, "Cap. Trabajo": False},
+        {"Ítem": "Capital de Trabajo", "Monto": 20000000.0, "Moneda": "Neto", "IVA Créd": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Cap. Trabajo": True},
     ])
-    def_ing_a1 = 150000000.0
-    def_ing_tipo = "Neto"
-    def_cv_a1 = 50000000.0
-    def_cv_tipo = "Neto"
-    def_cf_a1 = 10000000.0
-    def_cf_tipo = "Neto"
+    def_op_base = pd.DataFrame([{
+        "Unidades A1 (opcional)": 10000.0, "Precio A1 ($)": 15000.0, "Ingresos A1 ($)": 150000000.0, "Moneda Ing.": "Neto",
+        "CV Total A1 ($)": 50000000.0, "Moneda CV": "Neto", "CF Total A1 ($)": 10000000.0, "Moneda CF": "Neto"
+    }])
     def_tasas = pd.DataFrame({
         "Año": [1, 2, 3, 4, 5, 6],
         "Crec. Ingresos (%)": [0.0, 5.0, 5.0, 5.0, 5.0, 5.0],
-        "Crec. Costos Variables (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "Crec. Costos Var. (%)": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         "Crec. Costos Fijos (%)": [0.0, 3.0, 3.0, 3.0, 3.0, 3.0]
     })
 
-# Parámetros compactos (editables tanto en barra lateral como en la pestaña Datos)
-with st.expander(" Celdas de Entrada y Supuestos (Clic para mostrar/ocultar)", expanded=True):
-    p1, p2, p3, p4, p5, p6, p7 = st.columns(7)
-    horizonte = p1.number_input("Horizonte (n)", min_value=1, max_value=15, value=def_horizonte)
-    tasa_imp = p2.number_input("Impuesto (%)", value=def_tax, step=0.5) / 100.0
-    tasa_ke = p3.number_input("Ke (%)", value=def_ke, step=0.5) / 100.0
-    pct_deuda = p4.number_input("% Deuda", value=def_pct_deuda, step=5.0) / 100.0
-    tasa_kd = p5.number_input("Kd (%)", value=def_kd, step=0.25) / 100.0
-    plazo_deuda = p6.number_input("Plazo Créd.", min_value=1, max_value=15, value=def_plazo_deuda)
-    base_credito = p7.selectbox("Base Créd.", ["Inv. Bruta", "Inv. Neta"])
+# Opciones avanzadas discretas en la barra lateral izquierda
+base_credito = st.sidebar.selectbox("Base Crédito", ["Inv. Bruta", "Inv. Neta"])
+descuento_fcl = st.sidebar.selectbox("Tasa Descuento FCL", ["Ke", "WACC"])
+incluir_prestamo_fci0 = st.sidebar.checkbox("Sumar Préstamo en Año 0 FCI", value=True)
+usar_q_por_p = st.sidebar.checkbox("Calcular Ingresos A1 como Unidades x Precio", value=False)
+restar_rescate_dep = st.sidebar.checkbox("Restar Valor Rescate al depreciar", value=True)
 
-    gasto_credito_pct = st.sidebar.number_input("Gasto crédito (%)", value=def_gasto_credito, step=0.5) / 100.0
-    descuento_fcl = st.sidebar.radio("Tasa FCL", ["Ke", "WACC"])
-    incluir_prestamo_fci0 = st.sidebar.checkbox("Incluir Préstamo en Año 0 FCI", value=True)
+with st.sidebar.expander("Calculadora CAPM (Opcional)"):
+    rf_val = st.number_input("Tasa Libre Riesgo Rf (%)", value=6.0, step=0.5)
+    beta_val = st.number_input("Beta", value=1.25, step=0.05)
+    rm_val = st.number_input("Retorno Mercado Rm (%)", value=12.0, step=0.5)
+    capm_res = rf_val + beta_val * (rm_val - rf_val)
+    st.caption(f"Ke (CAPM) = {capm_res:.2f}%")
+
+# Panel de grillas de entrada (100% tablas tipo Excel, sin botones - / + ni selectores rojos)
+with st.expander("Celdas de Parámetros y Supuestos (Clic para mostrar/ocultar)", expanded=False):
+    st.caption("1. Parámetros Financieros Generales")
+    params_df = st.data_editor(def_params, use_container_width=True, hide_index=True)
+
+    horizonte = max(1, int(params_df.iloc[0]["Horizonte (años)"]))
+    tasa_imp = float(params_df.iloc[0]["Impuesto (%)"]) / 100.0
+    tasa_ke = float(params_df.iloc[0]["Ke (%)"]) / 100.0
+    pct_deuda = float(params_df.iloc[0]["% Deuda"]) / 100.0
+    tasa_kd = float(params_df.iloc[0]["Kd (%)"]) / 100.0
+    plazo_deuda = max(1, int(params_df.iloc[0]["Plazo Créd."]))
+    gasto_credito_pct = float(params_df.iloc[0]["Gasto Créd. (%)"]) / 100.0
     wacc_calc = tasa_ke * (1 - pct_deuda) + tasa_kd * (1 - tasa_imp) * pct_deuda
 
+    st.caption("2. Inversiones Año 0, Valor de Rescate y Capital de Trabajo")
     inv_df = st.data_editor(
         def_inv,
         num_rows="dynamic",
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Tipo Moneda": st.column_config.SelectboxColumn("Moneda", options=["Neto", "Bruto (dividir 1.19)"]),
+            "Moneda": st.column_config.SelectboxColumn("Moneda", options=["Neto", "Bruto (/1.19)"]),
         }
     )
 
-    modo_op = st.radio("Modo Operacional:", ["Montos Año 1 + Tasas", "Unitario (Q x P) + Tasas"], horizontal=True)
-    if modo_op == "Unitario (Q x P) + Tasas":
-        u1, u2, u3, u4, u5, u6 = st.columns(6)
-        q_base = u1.number_input("Q (Unidades)", value=38000.0, step=1000.0)
-        p_base = u2.number_input("Precio ($)", value=5000.0, step=100.0)
-        p_tipo = u3.selectbox("Moneda P", ["Bruto (dividir 1.19)", "Neto"])
-        cv_unit = u4.number_input("CV Unit. Neto ($)", value=1450.0, step=50.0)
-        cf_raw = u5.number_input("CF Año 1 ($)", value=5300000.0, step=100000.0)
-        cf_tipo_sel = u6.selectbox("Moneda CF", ["Bruto (dividir 1.19)", "Neto"])
-        ing_base_neto = (q_base * p_base) / 1.19 if "Bruto" in p_tipo else (q_base * p_base)
-        cv_base_neto = q_base * cv_unit
-        cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_tipo_sel else cf_raw
-    else:
-        o1, o2, o3, o4, o5, o6 = st.columns(6)
-        ing_raw = o1.number_input("Ingresos A1", value=def_ing_a1, step=1000000.0)
-        ing_t = o2.selectbox("Moneda Ing.", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_ing_tipo else 1)
-        cv_raw = o3.number_input("CV Total A1", value=def_cv_a1, step=500000.0)
-        cv_t = o4.selectbox("Moneda CV", ["Neto", "Bruto (dividir 1.19)"], index=0 if "Neto" in def_cv_tipo else 1)
-        cf_raw = o5.number_input("CF Total A1", value=def_cf_a1, step=500000.0)
-        cf_t = o6.selectbox("Moneda CF", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_cf_tipo else 1)
-        ing_base_neto = ing_raw / 1.19 if "Bruto" in ing_t else ing_raw
-        cv_base_neto = cv_raw / 1.19 if "Bruto" in cv_t else cv_raw
-        cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_t else cf_raw
+    st.caption("3. Operación Año 1 y Tasas de Crecimiento Anual (%)")
+    op_df = st.data_editor(
+        def_op_base,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Moneda Ing.": st.column_config.SelectboxColumn("Moneda Ing.", options=["Bruto (/1.19)", "Neto"]),
+            "Moneda CV": st.column_config.SelectboxColumn("Moneda CV", options=["Neto", "Bruto (/1.19)"]),
+            "Moneda CF": st.column_config.SelectboxColumn("Moneda CF", options=["Bruto (/1.19)", "Neto"]),
+        }
+    )
 
     if len(def_tasas) != horizonte:
         tasas_init = pd.DataFrame({
             "Año": list(range(1, horizonte + 1)),
             "Crec. Ingresos (%)": [0.0] + [4.5]*(horizonte - 1),
-            "Crec. Costos Variables (%)": [0.0]*horizonte,
+            "Crec. Costos Var. (%)": [0.0]*horizonte,
             "Crec. Costos Fijos (%)": [0.0] + [6.0]*min(2, horizonte-1) + [3.0]*max(0, horizonte-3)
         })
     else:
@@ -266,18 +289,26 @@ with st.expander(" Celdas de Entrada y Supuestos (Clic para mostrar/ocultar)", e
 
     tasas_df = st.data_editor(tasas_init, use_container_width=True, hide_index=True)
 
-# Cálculos internos
+# Procesamiento de datos operacionales Año 1
+r_op = op_df.iloc[0]
+ing_bruto_o_neto = (float(r_op["Unidades A1 (opcional)"]) * float(r_op["Precio A1 ($)"])) if usar_q_por_p else float(r_op["Ingresos A1 ($)"])
+ing_base_neto = ing_bruto_o_neto / 1.19 if "Bruto" in str(r_op["Moneda Ing."]) else ing_bruto_o_neto
+cv_base_neto = float(r_op["CV Total A1 ($)"]) / 1.19 if "Bruto" in str(r_op["Moneda CV"]) else float(r_op["CV Total A1 ($)"])
+cf_base_neto = float(r_op["CF Total A1 ($)"]) / 1.19 if "Bruto" in str(r_op["Moneda CF"]) else float(r_op["CF Total A1 ($)"])
+
+# Procesamiento de inversiones
 inv_processed = []
 for _, row in inv_df.iterrows():
     monto_raw = float(row["Monto"] or 0.0)
-    es_bruto = "Bruto" in str(row["Tipo Moneda"])
+    es_bruto = "Bruto" in str(row["Moneda"])
     val_neto = monto_raw / (1.0 + IVA_RATE) if es_bruto else monto_raw
-    afecto_iva = bool(row["Afecto IVA (Créd)"])
+    afecto_iva = bool(row["IVA Créd"])
     val_iva = val_neto * IVA_RATE if afecto_iva else 0.0
     val_bruto = val_neto + val_iva
     vida = max(1, int(row["Vida Útil"] or horizonte))
     rescate = float(row["Valor Rescate ($)"] or 0.0)
-    dep_anual = (val_neto - rescate) / vida if bool(row["Depreciable"]) else 0.0
+    base_dep = (val_neto - rescate) if restar_rescate_dep else val_neto
+    dep_anual = base_dep / vida if bool(row["Depreciable"]) else 0.0
     amort_anual = val_neto / vida if bool(row["Intangible"]) else 0.0
     inv_processed.append({
         "Ítem": row["Ítem"],
@@ -288,7 +319,7 @@ for _, row in inv_df.iterrows():
         "Depreciación Anual": dep_anual,
         "Amortización Anual": amort_anual,
         "Vida Útil": vida,
-        "Es CT": bool(row["Capital Trabajo"])
+        "Es CT": bool(row["Cap. Trabajo"])
     })
 df_inv_calc = pd.DataFrame(inv_processed)
 
@@ -308,7 +339,7 @@ curr_i, curr_v, curr_f = ing_base_neto, cv_base_neto, cf_base_neto
 for idx, r_row in tasas_df.iterrows():
     if idx > 0:
         curr_i *= (1.0 + float(r_row["Crec. Ingresos (%)"]) / 100.0)
-        curr_v *= (1.0 + float(r_row["Crec. Costos Variables (%)"]) / 100.0)
+        curr_v *= (1.0 + float(r_row["Crec. Costos Var. (%)"]) / 100.0)
         curr_f *= (1.0 + float(r_row["Crec. Costos Fijos (%)"]) / 100.0)
     ing_series.append(curr_i)
     cv_series.append(curr_v)
@@ -354,27 +385,25 @@ def calc_metrics(flujos, tasa_desc):
 
 tasa_fcl_usada = wacc_calc if "WACC" in descuento_fcl else tasa_ke
 
-# Armar tablas de flujos tipo Excel para mostrar en pantalla
-def construir_tabla_vista(es_inv=False):
+def construir_tabla_vista(es_inv=False, mult_ing=1.0, mult_cost=1.0):
     cols = ["Año 0"] + [f"Año {t}" for t in range(1, horizonte + 1)]
     data = {c: [] for c in cols}
-    
+
     flujos_netos = []
     inv0 = -total_inv_neta
     prest0 = monto_credito if (es_inv and incluir_prestamo_fci0) else 0.0
     f0 = inv0 + prest0
     flujos_netos.append(f0)
 
-    # Filas Año 0
     rows_a0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, inv0, prest0, 0, 0, 0, f0]
     for v in rows_a0:
         data["Año 0"].append(round(v))
 
     for t in range(horizonte):
         col_name = f"Año {t+1}"
-        ing_t = ing_series[t]
-        cv_t = -cv_series[t]
-        cf_t = -cf_series[t]
+        ing_t = ing_series[t] * mult_ing
+        cv_t = -cv_series[t] * mult_cost
+        cf_t = -cf_series[t] * mult_cost
         dep_t = -dep_anual_total
         amo_t = -amort_anual_total
         int_t = -intereses_anuales[t] if es_inv else 0.0
@@ -416,18 +445,17 @@ decision_fcl = "ACEPTAR" if van_fcl >= 0 and tir_fcl > tasa_fcl_usada else "RECH
 decision_fci = "ACEPTAR" if van_fci >= 0 and tir_fci > tasa_ke else "RECHAZAR"
 
 texto_interp_fcl = (
-    f"Nota FCL: VAN = ${van_fcl:,.0f} (Tasa {tasa_fcl_usada*100:.2f}%) | TIR = {tir_fcl*100:.2f}% | Payback = {pb_fcl}. "
-    f"El proyecto recupera la inversión neta (${total_inv_neta:,.0f}), cubre el costo de capital exigido y genera riqueza neta por ${abs(van_fcl):,.0f}. "
-    f"Criterio: {decision_fcl} (VAN >= 0 y TIR > Tasa de descuento)."
+    f"Celda Resumen FCL: VAN = ${van_fcl:,.0f} (Tasa {tasa_fcl_usada*100:.2f}%) | TIR = {tir_fcl*100:.2f}% | Payback = {pb_fcl}. "
+    f"El proyecto recupera la inversión neta (${total_inv_neta:,.0f}), cubre el costo de oportunidad del capital y genera un excedente de riqueza de ${abs(van_fcl):,.0f}. "
+    f"Decisión: {decision_fcl} (VAN >= 0 y TIR > Tasa exigida)."
 )
 
 texto_interp_fci = (
-    f"Nota Inversionista: Crédito = ${monto_credito:,.0f} ({pct_deuda*100:.0f}% Inv., Kd {tasa_kd*100:.2f}%, {plazo_deuda} años, Cuota PAGO = ${cuota_anual:,.0f}) | "
+    f"Celda Resumen Inversionista: Préstamo = ${monto_credito:,.0f} ({pct_deuda*100:.0f}% Inv., Kd {tasa_kd*100:.2f}%, {plazo_deuda} años, Cuota PAGO = ${cuota_anual:,.0f}) | "
     f"VAN FCI = ${van_fci:,.0f} (Ke {tasa_ke*100:.2f}%) | TIR FCI = {tir_fci*100:.2f}% | Payback = {pb_fci}. "
-    f"El apalancamiento financiero y el escudo fiscal de intereses ({tasa_imp*100:.1f}%) incrementan la rentabilidad sobre el capital propio. Criterio: {decision_fci}."
+    f"El apalancamiento financiero positivo y el ahorro tributario de los intereses ({tasa_imp*100:.1f}%) elevan la rentabilidad sobre los recursos propios. Decisión: {decision_fci}."
 )
 
-# Generador de Excel
 def generar_excel_formulas():
     wb = openpyxl.Workbook()
     font_title = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
@@ -482,7 +510,8 @@ def generar_excel_formulas():
         ws1.cell(curr_r, 5, f"=C{curr_r}+D{curr_r}").number_format = num_fmt_curr
         ws1.cell(curr_r, 6, r["Vida Útil"])
         ws1.cell(curr_r, 7, r["Valor Rescate"]).number_format = num_fmt_curr
-        ws1.cell(curr_r, 8, f"=(C{curr_r}-G{curr_r})/F{curr_r}" if r["Depreciación Anual"] > 0 else 0).number_format = num_fmt_curr
+        form_dep = f"=(C{curr_r}-G{curr_r})/F{curr_r}" if restar_rescate_dep else f"=C{curr_r}/F{curr_r}"
+        ws1.cell(curr_r, 8, form_dep if r["Depreciación Anual"] > 0 else 0).number_format = num_fmt_curr
         ws1.cell(curr_r, 9, f"=C{curr_r}/F{curr_r}" if r["Amortización Anual"] > 0 else 0).number_format = num_fmt_curr
 
     tot_inv_row = start_inv_row + len(df_inv_calc)
@@ -605,7 +634,7 @@ def generar_excel_formulas():
             col_let = get_column_letter(col_i)
             prev_let = get_column_letter(col_i - 1)
             g_ing = float(tasas_df.iloc[t-1]["Crec. Ingresos (%)"]) / 100.0
-            g_cv = float(tasas_df.iloc[t-1]["Crec. Costos Variables (%)"]) / 100.0
+            g_cv = float(tasas_df.iloc[t-1]["Crec. Costos Var. (%)"]) / 100.0
             g_cf = float(tasas_df.iloc[t-1]["Crec. Costos Fijos (%)"]) / 100.0
 
             if t == 1:
@@ -697,8 +726,8 @@ def generar_excel_formulas():
 
 excel_bytes = generar_excel_formulas()
 
-# Barra superior con resumen en una línea y botón discreto de guardado
-top_left, top_right = st.columns([5, 1])
+# Barra de estado discreta y exportación directa a Excel
+top_left, top_right = st.columns([5.5, 1])
 with top_left:
     st.caption(
         f"Inv. Neta: ${total_inv_neta:,.0f}  |  Inv. Bruta: ${total_inv_bruta:,.0f}  |  "
@@ -713,23 +742,24 @@ with top_right:
         use_container_width=True
     )
 
-# Pestañas estilo hojas de Excel
-tab1, tab2, tab3, tab4 = st.tabs([
+# Hojas inferiores estilo libro de cálculo
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Hoja1 (FCL)",
     "Hoja2 (Amortización)",
     "Hoja3 (Inversionista)",
-    "Hoja4 (Inversiones/IVA)"
+    "Hoja4 (Inversiones/IVA)",
+    "Hoja5 (Sensibilidad)"
 ])
 
 with tab1:
-    st.dataframe(df_fcl_vista.style.format("{:,.0f}"), use_container_width=True, height=420)
+    st.dataframe(df_fcl_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
     st.markdown(f'<div class="nota-celda">{texto_interp_fcl}</div>', unsafe_allow_html=True)
 
 with tab2:
     st.dataframe(df_amort.style.format("{:,.0f}"), use_container_width=True, hide_index=True)
 
 with tab3:
-    st.dataframe(df_fci_vista.style.format("{:,.0f}"), use_container_width=True, height=420)
+    st.dataframe(df_fci_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
     st.markdown(f'<div class="nota-celda">{texto_interp_fci}</div>', unsafe_allow_html=True)
 
 with tab4:
@@ -741,3 +771,16 @@ with tab4:
         use_container_width=True,
         hide_index=True
     )
+
+with tab5:
+    _, van_pes_fcl, tir_pes_fcl, pb_pes_fcl = construir_tabla_vista(es_inv=False, mult_ing=0.90)
+    _, van_opt_fcl, tir_opt_fcl, pb_opt_fcl = construir_tabla_vista(es_inv=False, mult_ing=1.10)
+    _, van_pes_fci, tir_pes_fci, pb_pes_fci = construir_tabla_vista(es_inv=True, mult_ing=0.90)
+    _, van_opt_fci, tir_opt_fci, pb_opt_fci = construir_tabla_vista(es_inv=True, mult_ing=1.10)
+
+    df_sens = pd.DataFrame([
+        {"Escenario": "Pesimista (-10% Ingresos)", "VAN FCL ($)": round(van_pes_fcl), "TIR FCL (%)": round(tir_pes_fcl*100, 2), "Payback FCL": pb_pes_fcl, "VAN Inversionista ($)": round(van_pes_fci), "TIR Inversionista (%)": round(tir_pes_fci*100, 2)},
+        {"Escenario": "Caso Base (100%)", "VAN FCL ($)": round(van_fcl), "TIR FCL (%)": round(tir_fcl*100, 2), "Payback FCL": pb_fcl, "VAN Inversionista ($)": round(van_fci), "TIR Inversionista (%)": round(tir_fci*100, 2)},
+        {"Escenario": "Optimista (+10% Ingresos)", "VAN FCL ($)": round(van_opt_fcl), "TIR FCL (%)": round(tir_opt_fcl*100, 2), "Payback FCL": pb_opt_fcl, "VAN Inversionista ($)": round(van_opt_fci), "TIR Inversionista (%)": round(tir_opt_fci*100, 2)},
+    ])
+    st.dataframe(df_sens, use_container_width=True, hide_index=True)
