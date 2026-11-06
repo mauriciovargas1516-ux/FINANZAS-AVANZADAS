@@ -2,29 +2,98 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 import io
 
-st.set_page_config(page_title="Calculadora de Flujos - Finanzas", layout="wide")
-
-st.title("📊 Generador de Flujos de Caja y Excel con Fórmulas")
-st.caption("Genera automáticamente FCL, Tabla de Amortización (PAGO) y FCI en pestañas separadas con fórmulas nativas de Excel e interpretación automática.")
-
-# --- PLANTILLAS PRECARGADAS ---
-plantilla = st.sidebar.selectbox(
-    "📂 Cargar Plantilla Base",
-    [
-        "1. Taller Foto - Estructura J (Planta Piloto $120M)",
-        "2. Guía Problema 2 (Planta Piloto $130M)",
-        "3. Ejercicio Práctico - Mariscos en Conserva",
-        "4. Personalizado (Desde cero)"
-    ]
+st.set_page_config(
+    page_title="Libro1.xlsx",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
+
+# CSS para camuflar Streamlit como una hoja de cálculo sobria
+st.markdown("""
+<style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .block-container {
+        padding-top: 0.8rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 100% !important;
+    }
+    .excel-ribbon {
+        font-family: 'Segoe UI', Calibri, sans-serif;
+        font-size: 12px;
+        color: #a0a0a0;
+        border-bottom: 1px solid #333;
+        padding: 4px 8px;
+        margin-bottom: 6px;
+        display: flex;
+        gap: 18px;
+    }
+    .excel-fx {
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        background-color: rgba(128, 128, 128, 0.1);
+        border: 1px solid rgba(128, 128, 128, 0.25);
+        padding: 4px 10px;
+        margin-bottom: 10px;
+        color: #bbb;
+    }
+    h1, h2, h3, h4 {
+        font-family: 'Segoe UI', Calibri, sans-serif !important;
+        font-weight: 500 !important;
+        font-size: 14px !important;
+        margin-top: 4px !important;
+        margin-bottom: 4px !important;
+    }
+    div[data-testid="stExpander"] summary p {
+        font-size: 13px !important;
+        font-weight: 400 !important;
+    }
+    .nota-celda {
+        font-family: Calibri, sans-serif;
+        font-size: 12.5px;
+        color: #9e9e9e;
+        border: 1px solid rgba(128, 128, 128, 0.25);
+        padding: 8px 12px;
+        margin-top: 6px;
+        background-color: rgba(128, 128, 128, 0.05);
+    }
+</style>
+<div class="excel-ribbon">
+    <span><b>Archivo</b></span>
+    <span>Inicio</span>
+    <span>Insertar</span>
+    <span>Disposición de página</span>
+    <span><b>Fórmulas</b></span>
+    <span>Datos</span>
+    <span>Revisar</span>
+    <span>Vista</span>
+</div>
+<div class="excel-fx">
+    <b>C21</b> &nbsp;|&nbsp; <i>fx</i> &nbsp; =SUMA(C13:C20)
+</div>
+""", unsafe_allow_html=True)
 
 IVA_RATE = 0.19
 
-if "1. Taller Foto" in plantilla:
+# Selector discreto en barra lateral o en panel plegable superior
+plantilla = st.sidebar.selectbox(
+    "Caso base",
+    [
+        "Caso 1 - Estructura J (120M)",
+        "Caso 2 - Guia P2 (130M)",
+        "Caso 3 - Conservas (13M)",
+        "Caso 4 - En blanco"
+    ]
+)
+
+if "Caso 1" in plantilla:
     def_horizonte = 6
     def_tax = 29.5
     def_ke = 13.0
@@ -52,7 +121,7 @@ if "1. Taller Foto" in plantilla:
         "Crec. Costos Fijos (%)": [0.0, 6.0, 6.0, 3.0, 3.0, 3.0]
     })
 
-elif "2. Guía Problema 2" in plantilla:
+elif "Caso 2" in plantilla:
     def_horizonte = 6
     def_tax = 29.5
     def_ke = 13.0
@@ -80,7 +149,7 @@ elif "2. Guía Problema 2" in plantilla:
         "Crec. Costos Fijos (%)": [0.0, 6.0, 6.0, 3.0, 3.0, 3.0]
     })
 
-elif "3. Ejercicio Práctico" in plantilla:
+elif "Caso 3" in plantilla:
     def_horizonte = 5
     def_tax = 29.5
     def_ke = 13.0
@@ -119,7 +188,7 @@ else:
     def_plazo_deuda = 5
     def_gasto_credito = 0.0
     def_inv = pd.DataFrame([
-        {"Ítem": "Activo Fijo Principal", "Monto": 100000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 20000000.0, "Intangible": False, "Capital Trabajo": False},
+        {"Ítem": "Activo Fijo", "Monto": 100000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": True, "Vida Útil": 6, "Valor Rescate ($)": 20000000.0, "Intangible": False, "Capital Trabajo": False},
         {"Ítem": "Capital de Trabajo", "Monto": 20000000.0, "Tipo Moneda": "Neto", "Afecto IVA (Créd)": True, "Depreciable": False, "Vida Útil": 6, "Valor Rescate ($)": 0.0, "Intangible": False, "Capital Trabajo": True},
     ])
     def_ing_a1 = 150000000.0
@@ -135,37 +204,69 @@ else:
         "Crec. Costos Fijos (%)": [0.0, 3.0, 3.0, 3.0, 3.0, 3.0]
     })
 
-# --- SIDEBAR: PARÁMETROS GENERALES ---
-st.sidebar.header("⚙️ Parámetros Generales")
-horizonte = st.sidebar.number_input("Horizonte de Evaluación (años)", min_value=1, max_value=15, value=def_horizonte)
-tasa_imp = st.sidebar.number_input("Tasa de Impuesto (%)", value=def_tax, step=0.5) / 100.0
-tasa_ke = st.sidebar.number_input("Tasa Costo de Capital Ke (%)", value=def_ke, step=0.5) / 100.0
+# Parámetros compactos (editables tanto en barra lateral como en la pestaña Datos)
+with st.expander(" Celdas de Entrada y Supuestos (Clic para mostrar/ocultar)", expanded=True):
+    p1, p2, p3, p4, p5, p6, p7 = st.columns(7)
+    horizonte = p1.number_input("Horizonte (n)", min_value=1, max_value=15, value=def_horizonte)
+    tasa_imp = p2.number_input("Impuesto (%)", value=def_tax, step=0.5) / 100.0
+    tasa_ke = p3.number_input("Ke (%)", value=def_ke, step=0.5) / 100.0
+    pct_deuda = p4.number_input("% Deuda", value=def_pct_deuda, step=5.0) / 100.0
+    tasa_kd = p5.number_input("Kd (%)", value=def_kd, step=0.25) / 100.0
+    plazo_deuda = p6.number_input("Plazo Créd.", min_value=1, max_value=15, value=def_plazo_deuda)
+    base_credito = p7.selectbox("Base Créd.", ["Inv. Bruta", "Inv. Neta"])
 
-st.sidebar.header("🏦 Financiamiento (Deuda)")
-base_credito = st.sidebar.selectbox("Base para % del Crédito", ["Inversión Bruta (con IVA 19%)", "Inversión Neta (sin IVA)"])
-pct_deuda = st.sidebar.number_input("% Financiado con Crédito", value=def_pct_deuda, step=5.0) / 100.0
-tasa_kd = st.sidebar.number_input("Tasa de Interés Crédito Kd (%)", value=def_kd, step=0.25) / 100.0
-plazo_deuda = st.sidebar.number_input("Plazo del Crédito (años)", min_value=1, max_value=15, value=def_plazo_deuda)
-gasto_credito_pct = st.sidebar.number_input("Gastos asociados al crédito (%)", value=def_gasto_credito, step=0.5) / 100.0
+    gasto_credito_pct = st.sidebar.number_input("Gasto crédito (%)", value=def_gasto_credito, step=0.5) / 100.0
+    descuento_fcl = st.sidebar.radio("Tasa FCL", ["Ke", "WACC"])
+    incluir_prestamo_fci0 = st.sidebar.checkbox("Incluir Préstamo en Año 0 FCI", value=True)
+    wacc_calc = tasa_ke * (1 - pct_deuda) + tasa_kd * (1 - tasa_imp) * pct_deuda
 
-st.sidebar.header("📐 Criterio Docente")
-descuento_fcl = st.sidebar.radio("Descontar FCL usando:", ["Ke (Costo Capital directo)", "WACC (Costo Promedio Ponderado)"])
-incluir_prestamo_fci0 = st.sidebar.checkbox("Sumar +Préstamo en Año 0 del FCI", value=True)
+    inv_df = st.data_editor(
+        def_inv,
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Tipo Moneda": st.column_config.SelectboxColumn("Moneda", options=["Neto", "Bruto (dividir 1.19)"]),
+        }
+    )
 
-wacc_calc = tasa_ke * (1 - pct_deuda) + tasa_kd * (1 - tasa_imp) * pct_deuda
-st.sidebar.info(f"**WACC Calculado:** {wacc_calc*100:.3f}%")
+    modo_op = st.radio("Modo Operacional:", ["Montos Año 1 + Tasas", "Unitario (Q x P) + Tasas"], horizontal=True)
+    if modo_op == "Unitario (Q x P) + Tasas":
+        u1, u2, u3, u4, u5, u6 = st.columns(6)
+        q_base = u1.number_input("Q (Unidades)", value=38000.0, step=1000.0)
+        p_base = u2.number_input("Precio ($)", value=5000.0, step=100.0)
+        p_tipo = u3.selectbox("Moneda P", ["Bruto (dividir 1.19)", "Neto"])
+        cv_unit = u4.number_input("CV Unit. Neto ($)", value=1450.0, step=50.0)
+        cf_raw = u5.number_input("CF Año 1 ($)", value=5300000.0, step=100000.0)
+        cf_tipo_sel = u6.selectbox("Moneda CF", ["Bruto (dividir 1.19)", "Neto"])
+        ing_base_neto = (q_base * p_base) / 1.19 if "Bruto" in p_tipo else (q_base * p_base)
+        cv_base_neto = q_base * cv_unit
+        cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_tipo_sel else cf_raw
+    else:
+        o1, o2, o3, o4, o5, o6 = st.columns(6)
+        ing_raw = o1.number_input("Ingresos A1", value=def_ing_a1, step=1000000.0)
+        ing_t = o2.selectbox("Moneda Ing.", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_ing_tipo else 1)
+        cv_raw = o3.number_input("CV Total A1", value=def_cv_a1, step=500000.0)
+        cv_t = o4.selectbox("Moneda CV", ["Neto", "Bruto (dividir 1.19)"], index=0 if "Neto" in def_cv_tipo else 1)
+        cf_raw = o5.number_input("CF Total A1", value=def_cf_a1, step=500000.0)
+        cf_t = o6.selectbox("Moneda CF", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_cf_tipo else 1)
+        ing_base_neto = ing_raw / 1.19 if "Bruto" in ing_t else ing_raw
+        cv_base_neto = cv_raw / 1.19 if "Bruto" in cv_t else cv_raw
+        cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_t else cf_raw
 
-# --- SECCIÓN 1: INVERSIONES ---
-st.subheader("1️⃣ Inversiones Iniciales, Depreciación y Ajuste de IVA (Año 0)")
-inv_df = st.data_editor(
-    def_inv,
-    num_rows="dynamic",
-    use_container_width=True,
-    column_config={
-        "Tipo Moneda": st.column_config.SelectboxColumn("Tipo Moneda", options=["Neto", "Bruto (dividir 1.19)"]),
-    }
-)
+    if len(def_tasas) != horizonte:
+        tasas_init = pd.DataFrame({
+            "Año": list(range(1, horizonte + 1)),
+            "Crec. Ingresos (%)": [0.0] + [4.5]*(horizonte - 1),
+            "Crec. Costos Variables (%)": [0.0]*horizonte,
+            "Crec. Costos Fijos (%)": [0.0] + [6.0]*min(2, horizonte-1) + [3.0]*max(0, horizonte-3)
+        })
+    else:
+        tasas_init = def_tasas
 
+    tasas_df = st.data_editor(tasas_init, use_container_width=True, hide_index=True)
+
+# Cálculos internos
 inv_processed = []
 for _, row in inv_df.iterrows():
     monto_raw = float(row["Monto"] or 0.0)
@@ -202,56 +303,6 @@ base_prestamo_val = total_inv_bruta if "Bruta" in base_credito else total_inv_ne
 monto_credito = base_prestamo_val * pct_deuda * (1.0 + gasto_credito_pct)
 cuota_anual = monto_credito * (tasa_kd * (1 + tasa_kd)**plazo_deuda) / ((1 + tasa_kd)**plazo_deuda - 1) if monto_credito > 0 else 0.0
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Inversión Total Neta", f"${total_inv_neta:,.0f}")
-c2.metric("Inversión Total Bruta", f"${total_inv_bruta:,.0f}")
-c3.metric("Monto Crédito a Solicitar", f"${monto_credito:,.0f}")
-c4.metric("Cuota Anual (PAGO)", f"${cuota_anual:,.0f}")
-
-# --- SECCIÓN 2: INGRESOS Y COSTOS OPERACIONALES ---
-st.subheader("2️⃣ Ingresos y Costos Operacionales")
-modo_op = st.radio("Método de ingreso de datos operativos:", ["Por Tasas de Crecimiento Anual (%)", "Calculadora Unitaria (Q × P) + Tasas"], horizontal=True)
-
-if modo_op == "Calculadora Unitaria (Q × P) + Tasas":
-    col_u1, col_u2, col_u3, col_u4 = st.columns(4)
-    q_base = col_u1.number_input("Unidades Año 1 (Q)", value=38000.0, step=1000.0)
-    p_base = col_u2.number_input("Precio Unitario ($)", value=5000.0, step=100.0)
-    p_tipo = col_u3.selectbox("Precio está en:", ["Bruto (dividir 1.19)", "Neto"])
-    cv_unit = col_u4.number_input("Costo Variable Unitario Neto ($)", value=1450.0, step=50.0)
-    ing_base_neto = (q_base * p_base) / 1.19 if "Bruto" in p_tipo else (q_base * p_base)
-    cv_base_neto = q_base * cv_unit
-    col_f1, col_f2 = st.columns(2)
-    cf_raw = col_f1.number_input("Costos Fijos Año 1 ($)", value=5300000.0, step=100000.0)
-    cf_tipo_sel = col_f2.selectbox("Costos Fijos están en:", ["Bruto (dividir 1.19)", "Neto"])
-    cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_tipo_sel else cf_raw
-else:
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        ing_raw = st.number_input("Ingresos Año 1 ($)", value=def_ing_a1, step=1000000.0)
-        ing_t = st.selectbox("Ingresos Año 1 en:", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_ing_tipo else 1)
-        ing_base_neto = ing_raw / 1.19 if "Bruto" in ing_t else ing_raw
-    with col_b:
-        cv_raw = st.number_input("Costos Variables Totales Año 1 ($)", value=def_cv_a1, step=500000.0)
-        cv_t = st.selectbox("Costos Variables en:", ["Neto", "Bruto (dividir 1.19)"], index=0 if "Neto" in def_cv_tipo else 1)
-        cv_base_neto = cv_raw / 1.19 if "Bruto" in cv_t else cv_raw
-    with col_c:
-        cf_raw = st.number_input("Costos Fijos / Egresos Op. Año 1 ($)", value=def_cf_a1, step=500000.0)
-        cf_t = st.selectbox("Costos Fijos en:", ["Bruto (dividir 1.19)", "Neto"], index=0 if "Bruto" in def_cf_tipo else 1)
-        cf_base_neto = cf_raw / 1.19 if "Bruto" in cf_t else cf_raw
-
-if len(def_tasas) != horizonte:
-    tasas_init = pd.DataFrame({
-        "Año": list(range(1, horizonte + 1)),
-        "Crec. Ingresos (%)": [0.0] + [4.5]*(horizonte - 1),
-        "Crec. Costos Variables (%)": [0.0]*horizonte,
-        "Crec. Costos Fijos (%)": [0.0] + [6.0]*min(2, horizonte-1) + [3.0]*max(0, horizonte-3)
-    })
-else:
-    tasas_init = def_tasas
-
-st.markdown("**Tasas de Crecimiento Anual por Año (%)**:")
-tasas_df = st.data_editor(tasas_init, use_container_width=True, hide_index=True)
-
 ing_series, cv_series, cf_series = [], [], []
 curr_i, curr_v, curr_f = ing_base_neto, cv_base_neto, cf_base_neto
 for idx, r_row in tasas_df.iterrows():
@@ -263,12 +314,10 @@ for idx, r_row in tasas_df.iterrows():
     cv_series.append(curr_v)
     cf_series.append(curr_f)
 
-# --- TABLA DE AMORTIZACIÓN ---
 amort_rows = []
 saldo = monto_credito
 amort_rows.append({"Período": 0, "Cuota": 0.0, "Interés": 0.0, "Amortización": 0.0, "Saldo": saldo})
-intereses_anuales = []
-amort_deuda_anuales = []
+intereses_anuales, amort_deuda_anuales = [], []
 
 for t in range(1, horizonte + 1):
     if t <= plazo_deuda and monto_credito > 0:
@@ -280,11 +329,10 @@ for t in range(1, horizonte + 1):
         interes, amort_cap, c_val = 0.0, 0.0, 0.0
     intereses_anuales.append(interes)
     amort_deuda_anuales.append(amort_cap)
-    amort_rows.append({"Período": t, "Cuota": c_val, "Interés": interes, "Amortización": amort_cap, "Saldo": saldo})
+    amort_rows.append({"Período": t, "Cuota": round(c_val), "Interés": round(interes), "Amortización": round(amort_cap), "Saldo": round(saldo)})
 
 df_amort = pd.DataFrame(amort_rows)
 
-# --- EVALUACIÓN Y MÉTRICAS ---
 def calc_metrics(flujos, tasa_desc):
     f_act = [flujos[t] / ((1.0 + tasa_desc)**t) for t in range(len(flujos))]
     van = sum(f_act)
@@ -293,82 +341,96 @@ def calc_metrics(flujos, tasa_desc):
     pos_roots = [r for r in real_roots if r > 0]
     tir = (min(pos_roots, key=lambda r: abs((r - 1) - 0.15)) - 1.0) if pos_roots else 0.0
     acum = np.cumsum(flujos)
-    pb_str = "No recupera en el horizonte"
+    pb_str = "No recupera"
     for t in range(1, len(flujos)):
         if acum[t] >= 0:
             prev_acum = abs(acum[t-1])
             frac_ano = prev_acum / flujos[t] if flujos[t] > 0 else 0
             anos = (t - 1) + frac_ano
             meses = int(round((anos - int(anos)) * 12))
-            pb_str = f"{anos:.2f} años ({int(anos)} años y {meses} meses)"
+            pb_str = f"{anos:.2f} años ({int(anos)}a {meses}m)"
             break
-    return van, tir, pb_str, f_act
+    return van, tir, pb_str, f_act, acum
 
 tasa_fcl_usada = wacc_calc if "WACC" in descuento_fcl else tasa_ke
 
-fcl_vec = [-total_inv_neta]
-fci_vec = [-total_inv_neta + (monto_credito if incluir_prestamo_fci0 else 0.0)]
-
-for t in range(horizonte):
-    dep_t = dep_anual_total
-    amort_int_t = amort_anual_total
-    bai_fcl = ing_series[t] - cv_series[t] - cf_series[t] - dep_t - amort_int_t
-    imp_fcl = -bai_fcl * tasa_imp
-    bdi_fcl = bai_fcl + imp_fcl
-    rescate_t = total_rescate_af if t == horizonte - 1 else 0.0
-    rec_ct_t = total_recup_ct if t == horizonte - 1 else 0.0
-    fcl_t = bdi_fcl + dep_t + amort_int_t + rescate_t + rec_ct_t
-    fcl_vec.append(fcl_t)
+# Armar tablas de flujos tipo Excel para mostrar en pantalla
+def construir_tabla_vista(es_inv=False):
+    cols = ["Año 0"] + [f"Año {t}" for t in range(1, horizonte + 1)]
+    data = {c: [] for c in cols}
     
-    bai_fci = ing_series[t] - cv_series[t] - cf_series[t] - dep_t - amort_int_t - intereses_anuales[t]
-    imp_fci = -bai_fci * tasa_imp
-    bdi_fci = bai_fci + imp_fci
-    fci_t = bdi_fci + dep_t + amort_int_t - amort_deuda_anuales[t] + rescate_t + rec_ct_t
-    fci_vec.append(fci_t)
+    flujos_netos = []
+    inv0 = -total_inv_neta
+    prest0 = monto_credito if (es_inv and incluir_prestamo_fci0) else 0.0
+    f0 = inv0 + prest0
+    flujos_netos.append(f0)
 
-van_fcl, tir_fcl, pb_fcl, _ = calc_metrics(fcl_vec, tasa_fcl_usada)
-van_fci, tir_fci, pb_fci, _ = calc_metrics(fci_vec, tasa_ke)
+    # Filas Año 0
+    rows_a0 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, inv0, prest0, 0, 0, 0, f0]
+    for v in rows_a0:
+        data["Año 0"].append(round(v))
 
-st.subheader("3️⃣ Resultados e Interpretación Automática")
+    for t in range(horizonte):
+        col_name = f"Año {t+1}"
+        ing_t = ing_series[t]
+        cv_t = -cv_series[t]
+        cf_t = -cf_series[t]
+        dep_t = -dep_anual_total
+        amo_t = -amort_anual_total
+        int_t = -intereses_anuales[t] if es_inv else 0.0
+        bai_t = ing_t + cv_t + cf_t + dep_t + amo_t + int_t
+        imp_t = -bai_t * tasa_imp
+        bdi_t = bai_t + imp_t
+        dep_pos = dep_anual_total
+        amo_pos = amort_anual_total
+        am_deuda = -amort_deuda_anuales[t] if es_inv else 0.0
+        resc_t = total_rescate_af if t == horizonte - 1 else 0.0
+        rec_ct = total_recup_ct if t == horizonte - 1 else 0.0
+        fn_t = bdi_t + dep_pos + amo_pos + am_deuda + resc_t + rec_ct
+        flujos_netos.append(fn_t)
+
+        vals_t = [ing_t, cv_t, cf_t, dep_t, amo_t, int_t, bai_t, imp_t, bdi_t, dep_pos, amo_pos, 0, 0, am_deuda, resc_t, rec_ct, fn_t]
+        for v in vals_t:
+            data[col_name].append(round(v))
+
+    t_desc = tasa_ke if es_inv else tasa_fcl_usada
+    van, tir, pb_str, f_act, acum = calc_metrics(flujos_netos, t_desc)
+    for idx_c, c_name in enumerate(cols):
+        data[c_name].append(round(f_act[idx_c]))
+        data[c_name].append(round(acum[idx_c]))
+
+    index_names = [
+        "(+) Ingresos", "(-) Costos Variables", "(-) Costos Fijos", "(-) Depreciación",
+        "(-) Amort. Intangibles", "(-) Intereses Deuda", "(=) BAI", "(-) Impuesto (29.5%)",
+        "(=) BDI", "(+) Depreciación", "(+) Amort. Intangibles", "(-) Inversión Inicial",
+        "(+) Préstamo", "(-) Amortización Deuda", "(+) Valor Rescate", "(+) Recup. Cap. Trabajo",
+        "(=) FLUJO CAJA NETO", "Flujo Actualizado (VP)", "Flujo Acumulado"
+    ]
+    df_vista = pd.DataFrame(data, index=index_names)
+    return df_vista, van, tir, pb_str
+
+df_fcl_vista, van_fcl, tir_fcl, pb_fcl = construir_tabla_vista(es_inv=False)
+df_fci_vista, van_fci, tir_fci, pb_fci = construir_tabla_vista(es_inv=True)
 
 decision_fcl = "ACEPTAR" if van_fcl >= 0 and tir_fcl > tasa_fcl_usada else "RECHAZAR"
 decision_fci = "ACEPTAR" if van_fci >= 0 and tir_fci > tasa_ke else "RECHAZAR"
 
 texto_interp_fcl = (
-    f"INTERPRETACIÓN FCL: El proyecto presenta un VAN de ${van_fcl:,.0f} (descontado al {tasa_fcl_usada*100:.2f}%). "
-    f"Al ser {'mayor' if van_fcl >= 0 else 'menor'} a cero, indica que el proyecto recupera la inversión inicial neta de ${total_inv_neta:,.0f}, "
-    f"cubre el costo de capital y {'agrega' if van_fcl >= 0 else 'destruye'} riqueza por ${abs(van_fcl):,.0f} en dinero de hoy. "
-    f"La TIR es de {tir_fcl*100:.2f}%, {'superando' if tir_fcl > tasa_fcl_usada else 'siendo inferior a'} la tasa de descuento. "
-    f"El Periodo de Recuperación (Payback) es de {pb_fcl}. Decisión: Se recomienda {decision_fcl} el proyecto."
+    f"Nota FCL: VAN = ${van_fcl:,.0f} (Tasa {tasa_fcl_usada*100:.2f}%) | TIR = {tir_fcl*100:.2f}% | Payback = {pb_fcl}. "
+    f"El proyecto recupera la inversión neta (${total_inv_neta:,.0f}), cubre el costo de capital exigido y genera riqueza neta por ${abs(van_fcl):,.0f}. "
+    f"Criterio: {decision_fcl} (VAN >= 0 y TIR > Tasa de descuento)."
 )
 
 texto_interp_fci = (
-    f"INTERPRETACIÓN INVERSIONISTA (FCI): Al incorporar el crédito por ${monto_credito:,.0f} ({pct_deuda*100:.0f}% al {tasa_kd*100:.2f}% por {plazo_deuda} años, "
-    f"cuota fija de ${cuota_anual:,.0f}), el VAN para los recursos propios es de ${van_fci:,.0f} y la TIR alcanza un {tir_fci*100:.2f}% "
-    f"(frente al Ke exigido de {tasa_ke*100:.2f}%). El Payback es de {pb_fci}. "
-    f"El escudo fiscal de los intereses ({tasa_imp*100:.1f}%) y el apalancamiento financiero positivo potencian la rentabilidad del inversionista. "
-    f"Decisión: Se recomienda {decision_fci} el proyecto financiándolo con deuda bancaria."
+    f"Nota Inversionista: Crédito = ${monto_credito:,.0f} ({pct_deuda*100:.0f}% Inv., Kd {tasa_kd*100:.2f}%, {plazo_deuda} años, Cuota PAGO = ${cuota_anual:,.0f}) | "
+    f"VAN FCI = ${van_fci:,.0f} (Ke {tasa_ke*100:.2f}%) | TIR FCI = {tir_fci*100:.2f}% | Payback = {pb_fci}. "
+    f"El apalancamiento financiero y el escudo fiscal de intereses ({tasa_imp*100:.1f}%) incrementan la rentabilidad sobre el capital propio. Criterio: {decision_fci}."
 )
 
-col_r1, col_r2 = st.columns(2)
-with col_r1:
-    st.markdown(f"#### 📈 Flujo de Caja Libre (Tasa: {tasa_fcl_usada*100:.2f}%)")
-    st.metric("VAN FCL", f"${van_fcl:,.0f}")
-    st.metric("TIR FCL", f"{tir_fcl*100:.2f}%")
-    st.write(f"**Periodo de Recuperación:** {pb_fcl}")
-    st.success(texto_interp_fcl)
-
-with col_r2:
-    st.markdown(f"#### 💼 Flujo del Inversionista (Tasa Ke: {tasa_ke*100:.2f}%)")
-    st.metric("VAN Inversionista", f"${van_fci:,.0f}")
-    st.metric("TIR Inversionista", f"{tir_fci*100:.2f}%")
-    st.write(f"**Periodo de Recuperación:** {pb_fci}")
-    st.info(texto_interp_fci)
-
-# --- GENERADOR DE EXCEL CON FÓRMULAS NATIVAS ---
+# Generador de Excel
 def generar_excel_formulas():
     wb = openpyxl.Workbook()
-    font_title = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    font_title = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     fill_title = PatternFill("solid", fgColor="1F4E78")
     font_bold = Font(name="Calibri", size=10, bold=True)
     fill_sub = PatternFill("solid", fgColor="D9E1F2")
@@ -376,7 +438,6 @@ def generar_excel_formulas():
     num_fmt_curr = "#,##0;(#,##0);\"-\""
     num_fmt_pct = "0.00%"
 
-    # PESTAÑA 1
     ws1 = wb.active
     ws1.title = "1_Supuestos_Inversion"
     ws1["B2"] = "PARÁMETROS Y SUPUESTOS DEL PROYECTO"
@@ -439,7 +500,6 @@ def generar_excel_formulas():
     ws1.cell(loan_row, 3, f"={base_col_let}{tot_inv_row}*C7*(1+{gasto_credito_pct})").number_format = num_fmt_curr
     ws1.cell(loan_row, 3).font = font_bold
 
-    # PESTAÑA 3: AMORTIZACIÓN
     ws3 = wb.create_sheet("3_Tabla_Amortizacion")
     ws3["B2"] = "CÁLCULO DE CRÉDITO Y TABLA DE AMORTIZACIÓN"
     ws3["B2"].font = font_title
@@ -484,7 +544,6 @@ def generar_excel_formulas():
         for c_item in [c_cuota, c_int, c_am, c_sal]:
             c_item.number_format = num_fmt_curr
 
-    # FUNCIÓN PARA CREAR FCL Y FCI
     def poblar_hoja_flujo(ws, es_inversionista=False):
         titulo = "FLUJO DE CAJA DEL INVERSIONISTA (FCI)" if es_inversionista else "FLUJO DE CAJA LIBRE (FCL)"
         ws["B2"] = titulo
@@ -636,13 +695,49 @@ def generar_excel_formulas():
     wb.save(output)
     return output.getvalue()
 
-st.divider()
 excel_bytes = generar_excel_formulas()
-st.download_button(
-    label="📥 DESCARGAR EXCEL CON FÓRMULAS NATIVAS (.XLSX)",
-    data=excel_bytes,
-    file_name="Taller_Flujos_de_Caja_Formulas.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    type="primary",
-    use_container_width=True
-)
+
+# Barra superior con resumen en una línea y botón discreto de guardado
+top_left, top_right = st.columns([5, 1])
+with top_left:
+    st.caption(
+        f"Inv. Neta: ${total_inv_neta:,.0f}  |  Inv. Bruta: ${total_inv_bruta:,.0f}  |  "
+        f"Crédito: ${monto_credito:,.0f}  |  Cuota PAGO: ${cuota_anual:,.0f}  |  WACC: {wacc_calc*100:.2f}%"
+    )
+with top_right:
+    st.download_button(
+        label="Guardar (.xlsx)",
+        data=excel_bytes,
+        file_name="Libro1.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+
+# Pestañas estilo hojas de Excel
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Hoja1 (FCL)",
+    "Hoja2 (Amortización)",
+    "Hoja3 (Inversionista)",
+    "Hoja4 (Inversiones/IVA)"
+])
+
+with tab1:
+    st.dataframe(df_fcl_vista.style.format("{:,.0f}"), use_container_width=True, height=420)
+    st.markdown(f'<div class="nota-celda">{texto_interp_fcl}</div>', unsafe_allow_html=True)
+
+with tab2:
+    st.dataframe(df_amort.style.format("{:,.0f}"), use_container_width=True, hide_index=True)
+
+with tab3:
+    st.dataframe(df_fci_vista.style.format("{:,.0f}"), use_container_width=True, height=420)
+    st.markdown(f'<div class="nota-celda">{texto_interp_fci}</div>', unsafe_allow_html=True)
+
+with tab4:
+    st.dataframe(
+        df_inv_calc[["Ítem", "Valor Neto", "IVA (19%)", "Valor Bruto", "Vida Útil", "Valor Rescate", "Depreciación Anual", "Amortización Anual"]].style.format({
+            "Valor Neto": "{:,.0f}", "IVA (19%)": "{:,.0f}", "Valor Bruto": "{:,.0f}",
+            "Valor Rescate": "{:,.0f}", "Depreciación Anual": "{:,.0f}", "Amortización Anual": "{:,.0f}"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
