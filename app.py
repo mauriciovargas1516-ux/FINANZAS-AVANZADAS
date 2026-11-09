@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import openpyxl
@@ -12,12 +13,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Camuflaje CSS Verde Excel Online (incluye corrección del color rojo en pestañas activas)
+# Camuflaje CSS Verde Excel Online + Ocultamiento de insignias de Streamlit Cloud
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
+    .stDeployButton, [data-testid="stDeployButton"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    [data-testid="stToolbar"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [class*="viewerBadge"], [class*="_profileContainer"], [class*="_profilePreview"] {display: none !important;}
+    iframe[height="0"] {display: none !important;}
     .block-container {
         padding-top: 0.1rem !important;
         padding-bottom: 1rem !important;
@@ -809,3 +817,40 @@ with tab5:
         {"Escenario": "Optimista (+10% Ingresos)", "VAN FCL ($)": round(van_opt_fcl), "TIR FCL (%)": round(tir_opt_fcl*100, 2), "Payback FCL": pb_opt_fcl, "VAN Inversionista ($)": round(van_opt_fci), "TIR Inversionista (%)": round(tir_opt_fci*100, 2)},
     ])
     st.dataframe(df_sens, use_container_width=True, hide_index=True)
+
+# Script para ocultar elementos externos de Streamlit Cloud (corona roja, foto y barra inferior)
+components.html(
+    """
+    <script>
+        const hideStreamlitBranding = () => {
+            try {
+                const docs = [window.document, window.parent.document, window.top.document];
+                docs.forEach(doc => {
+                    if (doc && !doc.getElementById('hide-st-cloud-branding')) {
+                        const style = doc.createElement('style');
+                        style.id = 'hide-st-cloud-branding';
+                        style.innerHTML = `
+                            div[class*="viewerBadge"],
+                            a[class*="viewerBadge"],
+                            div[class*="_profileContainer"],
+                            div[class*="_profilePreview"],
+                            div[class*="embeddedAppMetaInfoBar"],
+                            a[href*="streamlit.io"],
+                            a[href*="share.streamlit.io/user"] {
+                                display: none !important;
+                                visibility: hidden !important;
+                                opacity: 0 !important;
+                                pointer-events: none !important;
+                            }
+                        `;
+                        doc.head.appendChild(style);
+                    }
+                });
+            } catch (e) {}
+        };
+        hideStreamlitBranding();
+        setInterval(hideStreamlitBranding, 500);
+    </script>
+    """,
+    height=0,
+)
