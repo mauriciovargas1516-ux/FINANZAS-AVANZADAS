@@ -618,7 +618,7 @@ def generar_excel_monocromatico():
         for t in range(horizonte + 1):
             c = ws.cell(4, 3 + t, t)
             c.font = font_bold
-            c.border = border_bottom
+            c_hdr.border = border_bottom
             c.alignment = Alignment(horizontal="right")
 
         filas_labels = [
@@ -776,12 +776,14 @@ with top_right:
         use_container_width=True
     )
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Hoja1 (FCL)",
     "Hoja2 (Amortización)",
     "Hoja3 (Inversionista)",
     "Hoja4 (Inversiones/IVA)",
-    "Hoja5 (Sensibilidad)"
+    "Hoja5 (Sensibilidad)",
+    "Hoja6 (Monte Carlo)",
+    "Hoja7 (Guía Repaso)"
 ])
 
 with tab1:
@@ -817,6 +819,258 @@ with tab5:
         {"Escenario": "Optimista (+10% Ingresos)", "VAN FCL ($)": round(van_opt_fcl), "TIR FCL (%)": round(tir_opt_fcl*100, 2), "Payback FCL": pb_opt_fcl, "VAN Inversionista ($)": round(van_opt_fci), "TIR Inversionista (%)": round(tir_opt_fci*100, 2)},
     ])
     st.dataframe(df_sens, use_container_width=True, hide_index=True)
+
+    with st.expander("Calculadora de VAN Esperado por Probabilidades (Ej. 5 Guía)", expanded=False):
+        c_p1, c_p2, c_p3 = st.columns(3)
+        with c_p1:
+            prob_opt = st.number_input("Prob. Optimista (%)", value=30.0, step=5.0, help="Probabilidad asignada al escenario optimista.")
+            van_opt_in = st.number_input("VAN Optimista ($)", value=250000000.0, step=5000000.0, format="%.0f")
+        with c_p2:
+            prob_nor = st.number_input("Prob. Normal (%)", value=50.0, step=5.0, help="Probabilidad asignada al escenario base o normal.")
+            van_nor_in = st.number_input("VAN Normal ($)", value=100000000.0, step=5000000.0, format="%.0f")
+        with c_p3:
+            prob_pes = st.number_input("Prob. Pesimista (%)", value=20.0, step=5.0, help="Probabilidad asignada al escenario pesimista.")
+            van_pes_in = st.number_input("VAN Pesimista ($)", value=-80000000.0, step=5000000.0, format="%.0f")
+
+        van_esperado_disc = (prob_opt/100.0)*van_opt_in + (prob_nor/100.0)*van_nor_in + (prob_pes/100.0)*van_pes_in
+        desv_est_van = np.sqrt(
+            (prob_opt/100.0)*((van_opt_in - van_esperado_disc)**2) +
+            (prob_nor/100.0)*((van_nor_in - van_esperado_disc)**2) +
+            (prob_pes/100.0)*((van_pes_in - van_esperado_disc)**2)
+        )
+        st.markdown(
+            f'<div class="nota-celda"><b>Resultado VAN Esperado E(VAN):</b> ${van_esperado_disc:,.0f} &nbsp;|&nbsp; '
+            f'<b>Desviación Estándar (Riesgo):</b> ${desv_est_van:,.0f} &nbsp;|&nbsp; '
+            f'<b>Coeficiente de Variación:</b> {(desv_est_van/abs(van_esperado_disc) if van_esperado_disc != 0 else 0):.2f} '
+            f'{"(ACEPTAR: E(VAN) > 0, pero monitorear probabilidad de pérdida de " + str(prob_pes) + "%)" if van_esperado_disc > 0 else "(RECHAZAR)"}</div>',
+            unsafe_allow_html=True
+        )
+
+with tab6:
+    st.caption("Simulación Estocástica de Monte Carlo (10.000 Iteraciones Triangulares sobre el Caso Activo)")
+    mc_c1, mc_c2, mc_c3, mc_c4 = st.columns(4)
+    with mc_c1:
+        ing_min_pct = st.number_input(
+            "Ingresos Mín. (% del Base)", value=80.0, step=5.0,
+            help="Porcentaje de los ingresos proyectados en el peor escenario razonable (ej. 80% equivale a una caída del 20%)."
+        )
+        ing_max_pct = st.number_input(
+            "Ingresos Máx. (% del Base)", value=125.0, step=5.0,
+            help="Porcentaje de los ingresos proyectados en un escenario comercial favorable (ej. 125% equivale a un alza del 25%)."
+        )
+    with mc_c2:
+        cv_min_pct = st.number_input(
+            "Costo Var. Mín. (% del Base)", value=85.0, step=5.0,
+            help="Porcentaje del costo variable en caso de eficiencias o descuentos por volumen."
+        )
+        cv_max_pct = st.number_input(
+            "Costo Var. Máx. (% del Base)", value=120.0, step=5.0,
+            help="Porcentaje del costo variable si suben las materias primas o insumos."
+        )
+    with mc_c3:
+        cf_min_pct = st.number_input(
+            "Costo Fijo Mín. (% del Base)", value=95.0, step=5.0,
+            help="Variación mínima de los costos fijos anuales."
+        )
+        cf_max_pct = st.number_input(
+            "Costo Fijo Máx. (% del Base)", value=110.0, step=5.0,
+            help="Variación máxima de los costos fijos anuales por inflación o imprevistos."
+        )
+    with mc_c4:
+        tipo_flujo_mc = st.selectbox(
+            "Flujo a Simular",
+            ["Flujo de Caja Libre (FCL)", "Flujo Inversionista (FCI)"],
+            help="Elige si deseas evaluar el riesgo del proyecto puro (FCL) o el riesgo para el accionista con deuda (FCI)."
+        )
+        semilla_mc = st.number_input(
+            "Iteraciones", value=10000, min_value=1000, max_value=50000, step=1000,
+            help="Número de escenarios aleatorios evaluados mediante distribución triangular año a año."
+        )
+
+    es_fci_mc = "Inversionista" in tipo_flujo_mc
+    n_iter = int(semilla_mc)
+    tasa_mc = tasa_ke if es_fci_mc else tasa_fcl_usada
+
+    # Año 0
+    inv0_mc = -total_inv_neta + (monto_credito if (es_fci_mc and incluir_prestamo_fci0) else 0.0)
+    van_mc = np.full(n_iter, inv0_mc, dtype=float)
+
+    # Simulación año a año rompiendo la linealidad
+    np.random.seed(42)
+    f_ing_min, f_ing_max = min(ing_min_pct, 100.0)/100.0, max(ing_max_pct, 100.01)/100.0
+    f_cv_min, f_cv_max = min(cv_min_pct, 100.0)/100.0, max(cv_max_pct, 100.01)/100.0
+    f_cf_min, f_cf_max = min(cf_min_pct, 100.0)/100.0, max(cf_max_pct, 100.01)/100.0
+
+    for t in range(horizonte):
+        mult_i = np.random.triangular(f_ing_min, 1.0, f_ing_max, n_iter)
+        mult_v = np.random.triangular(f_cv_min, 1.0, f_cv_max, n_iter)
+        mult_f = np.random.triangular(f_cf_min, 1.0, f_cf_max, n_iter)
+
+        ing_sim = ing_series[t] * mult_i
+        cv_sim = cv_series[t] * mult_v
+        cf_sim = cf_series[t] * mult_f
+        int_sim = intereses_anuales[t] if es_fci_mc else 0.0
+
+        bai_sim = ing_sim - cv_sim - cf_sim - dep_anual_total - amort_anual_total - int_sim
+        imp_sim = bai_sim * tasa_imp
+        bdi_sim = bai_sim - imp_sim
+
+        am_deuda_sim = amort_deuda_anuales[t] if es_fci_mc else 0.0
+        resc_sim = (total_rescate_af + total_recup_ct) if t == horizonte - 1 else 0.0
+
+        fn_sim = bdi_sim + dep_anual_total + amort_anual_total - am_deuda_sim + resc_sim
+        van_mc += fn_sim / ((1.0 + tasa_mc) ** (t + 1))
+
+    van_prom_mc = float(van_mc.mean())
+    prob_exito_mc = float((van_mc >= 0).mean() * 100.0)
+    riesgo_dest_mc = 100.0 - prob_exito_mc
+    var_95_mc = float(np.percentile(van_mc, 5))
+
+    k_mc1, k_mc2, k_mc3, k_mc4 = st.columns(4)
+    k_mc1.metric(
+        "VAN Promedio Simulado", f"${van_prom_mc:,.0f}",
+        help="Promedio de riqueza neta creada tras simular los 10.000 escenarios."
+    )
+    k_mc2.metric(
+        "Probabilidad de Éxito (VAN >= 0)", f"{prob_exito_mc:.2f}%",
+        help="Porcentaje de universos simulados en los que el proyecto supera la tasa exigida."
+    )
+    k_mc3.metric(
+        "Riesgo Destrucción Valor", f"{riesgo_dest_mc:.2f}%",
+        help="Porcentaje de escenarios donde el VAN resulta negativo."
+    )
+    k_mc4.metric(
+        "VaR 95% (Percentil 5%)", f"${var_95_mc:,.0f}",
+        help="Valor en Riesgo: Con un 95% de confianza, el VAN no caerá por debajo de este monto."
+    )
+
+    # Histograma de frecuencias compatible sin requerir librerías externas
+    conteos, bordes = np.histogram(van_mc, bins=35)
+    etiquetas_bins = [f"${(bordes[i]+bordes[i+1])/2000000:,.1f}M" for i in range(len(conteos))]
+    df_hist = pd.DataFrame({
+        "Rango VAN ($ Millones)": etiquetas_bins,
+        "Frecuencia (Escenarios)": conteos
+    }).set_index("Rango VAN ($ Millones)")
+    st.bar_chart(df_hist, height=260, color="#107c41")
+
+    df_resumen_mc = pd.DataFrame([
+        {
+            "Métrica Monte Carlo": "VAN Promedio Esperado",
+            "Valor ($ / %)": f"${van_prom_mc:,.0f}",
+            "Peor Escenario (Mín)": f"${van_mc.min():,.0f}",
+            "Mejor Escenario (Máx)": f"${van_mc.max():,.0f}",
+            "Percentil 5% (VaR 95%)": f"${var_95_mc:,.0f}",
+            "Mediana (P50)": f"${np.median(van_mc):,.0f}",
+            "Prob. Éxito (%)": f"{prob_exito_mc:.2f}%"
+        }
+    ])
+    st.dataframe(df_resumen_mc, use_container_width=True, hide_index=True)
+
+    st.markdown(
+        f'<div class="nota-celda"><b>Conclusión Estocástica ({tipo_flujo_mc}):</b> Tras evaluar {n_iter:,} escenarios con distribución triangular '
+        f'y tasa de descuento de {tasa_mc*100:.2f}%, el proyecto presenta una probabilidad de éxito comercial de <b>{prob_exito_mc:.2f}%</b> '
+        f'y un VAN medio de <b>${van_prom_mc:,.0f}</b>. En el 5% de los peores escenarios (VaR 95%), el VAN se sitúa en <b>${var_95_mc:,.0f}</b>.</div>',
+        unsafe_allow_html=True
+    )
+
+with tab7:
+    st.caption("Pauta de Auditoría y Resolución: Guía de Análisis - Inversión en Activos Reales")
+    guia_selec = st.selectbox(
+        "Seleccionar Ejercicio de la Guía",
+        [
+            "Ejercicio 7: Auditoría de los 3 Errores del Flujo de Caja (Conservas)",
+            "Ejercicio 8: Proyecto a 10 años (Ampliación, Reemplazo y Costo Hundido)",
+            "Ejercicios 1 al 6: Respuestas Conceptuales y Criterios VAN vs. TIR vs. Payback"
+        ]
+    )
+
+    if "Ejercicio 7" in guia_selec:
+        df_err7 = pd.DataFrame([
+            {
+                "N° Error": "1. Inconsistencia de signos en Egresos, Depreciación e Inversiones",
+                "Evidencia en la Tabla del Asesor": "Materia prima Año 1 (+13.000.000), MOI Años 3-5 (+5.040.000 y +6.500.000), Insumos Años 1, 4 y 5 (+), Gastos Generales (+1.000.000), Depreciación (+4.845.000) e Inversiones Año 0 en Act. Nominales (+1.000.000) y Cap. Trabajo (+1.100.000).",
+                "Justificación Conceptual": "Los costos operativos, la depreciación pre-impuestos y los desembolsos de inversión en el Año 0 son salidas o deducciones y deben llevar signo negativo consistente. Mezclar signos distorsiona la Utilidad Antes de Impuestos y confunde la lectura contable."
+            },
+            {
+                "N° Error": "2. Omisión del reverso de la Depreciación después de impuestos",
+                "Evidencia en la Tabla del Asesor": "Después de la Utilidad Después de Impuestos solo se vuelve a sumar la Amortización (+200.000), pero se omite sumar de vuelta la Depreciación (+4.845.000).",
+                "Justificación Conceptual": "La depreciación no constituye un flujo de salida de efectivo real; solo se resta antes de impuestos para capturar su escudo fiscal. Al no reversarla después de impuestos, se subestima el Flujo de Caja Libre anual en $4.845.000."
+            },
+            {
+                "N° Error": "3. Multiplicación en vez de división por el Factor de Actualización",
+                "Evidencia en la Tabla del Asesor": "En el Año 1 el Flujo de Caja es $6.327.737 y el Flujo Actualizado sube a $7.273.260 (multiplicó 6.327.737 x 1,149425 en vez de dividir).",
+                "Justificación Conceptual": "Por el valor del dinero en el tiempo, un peso futuro vale menos hoy. Para traer flujos futuros a Valor Presente se debe dividir por (1 + r)^t o multiplicar por (1 + r)^(-t). El asesor capitalizó los flujos hacia el futuro en vez de descontarlos."
+            }
+        ])
+        st.dataframe(df_err7, use_container_width=True, hide_index=True)
+        st.markdown(
+            '<div class="nota-celda"><b>Nota práctica:</b> Para ver este flujo corregido y cuadrado al peso, '
+            'selecciona <b>"Caso 3 - Conservas (13M)"</b> en el menú lateral izquierdo y revisa la <b>Hoja1 (FCL)</b>.</div>',
+            unsafe_allow_html=True
+        )
+
+    elif "Ejercicio 8" in guia_selec:
+        # Modelo exacto Ejercicio 8 (10 años, valores netos, tasa 12%, impuesto 15%)
+        cols_e8 = [f"Año {t}" for t in range(11)]
+        ing_e8 = [0] + [25000000]*2 + [30000000]*3 + [36000000]*5
+        cv_fab_e8 = [0] + [-3000000]*5 + [-3420000]*5
+        comis_e8 = [0] + [-500000]*2 + [-600000]*3 + [-720000]*5
+        cf_fab_e8 = [0] + [-2000000]*5 + [-2200000]*5
+        gav_e8 = [0] + [-800000]*5 + [-820000]*5
+        # Depreciación: Obras físicas 60M/20 = 3M (A1-5), +12M/20 = 0.6M -> 3.6M (A6-10)
+        # Máquinas: 48M/10 = 4.8M (A1-5), +8M/10 = 0.8M -> 5.6M (A6-10, reemplazo 10M en A8 mantiene dep 1M/año)
+        dep_e8 = [0] + [-7800000]*5 + [-9200000]*5
+        # Amortización intangibles: Puesta en marcha $1.200.000 (excluye $800.000 de estudio de viabilidad por ser costo hundido) / 5 años = 240.000
+        amo_e8 = [0] + [-240000]*5 + [0]*5
+        vta_maq_e8 = [0]*8 + [2500000] + [0]*2
+        vl_maq_e8 = [0]*8 + [-2000000] + [0]*2
+
+        uai_e8 = [ing_e8[t]+cv_fab_e8[t]+comis_e8[t]+cf_fab_e8[t]+gav_e8[t]+dep_e8[t]+amo_e8[t]+vta_maq_e8[t]+vl_maq_e8[t] for t in range(11)]
+        imp_e8 = [-max(0, uai_e8[t])*0.15 for t in range(11)]
+        udi_e8 = [uai_e8[t]+imp_e8[t] for t in range(11)]
+        rev_dep_e8 = [0] + [-dep_e8[t] for t in range(1, 11)]
+        rev_amo_e8 = [0] + [-amo_e8[t] for t in range(1, 11)]
+        rev_vl_e8 = [0]*8 + [2000000] + [0]*2
+
+        # Inversiones: A0 = -(12M Terreno + 60M Obras + 48M Maq + 1.2M Puesta en Marcha + 2.9M Cap.Trab) = -124.100.000
+        # A5 (fin año 5 para operar año 6) = -(12M Obras + 8M Maq) = -20.000.000 | A8 = -10.000.000 reemplazo maq
+        inv_e8 = [-124100000, 0, 0, 0, 0, -20000000, 0, 0, -10000000, 0, 0]
+        desecho_e8 = [0]*10 + [139117000]
+        rec_ct_e8 = [0]*10 + [2900000]
+
+        fcn_e8 = [udi_e8[t]+rev_dep_e8[t]+rev_amo_e8[t]+rev_vl_e8[t]+inv_e8[t]+desecho_e8[t]+rec_ct_e8[t] for t in range(11)]
+        van_e8, tir_e8, pb_e8, vp_e8, _ = calc_metrics(fcn_e8, 0.12)
+
+        df_e8 = pd.DataFrame(
+            [ing_e8, cv_fab_e8, comis_e8, cf_fab_e8, gav_e8, dep_e8, amo_e8, vta_maq_e8, vl_maq_e8, uai_e8, imp_e8, udi_e8, rev_dep_e8, rev_amo_e8, rev_vl_e8, inv_e8, desecho_e8, rec_ct_e8, fcn_e8, [round(x) for x in vp_e8]],
+            index=[
+                "(+) Ingresos", "(-) Costos Var. Fabricación", "(-) Comisiones (2%)", "(-) Costos Fijos Fab.",
+                "(-) Gastos Adm. y Ventas", "(-) Depreciación", "(-) Amort. Intangibles", "(+) Venta Máquina Usada",
+                "(-) Valor Libro Máquina", "(=) Utilidad Antes Impuestos", "(-) Impuesto (15%)", "(=) Utilidad Neta",
+                "(+) Depreciación", "(+) Amort. Intangibles", "(+) Valor Libro Máquina", "(-) Inversiones (Capex/CT)",
+                "(+) Valor de Desecho", "(+) Recup. Cap. Trabajo", "(=) FLUJO DE CAJA NETO", "Flujo Actualizado (12%)"
+            ],
+            columns=cols_e8
+        )
+        st.dataframe(df_e8.style.format("{:,.0f}"), use_container_width=True, height=420)
+        st.markdown(
+            f'<div class="nota-celda"><b>Resultado Ejercicio 8 (10 años, Tasa 12%, Impuesto 15%):</b> '
+            f'VAN = <b>${van_e8:,.0f}</b> | TIR = <b>{tir_e8*100:.2f}%</b> | Payback = <b>{pb_e8}</b>. '
+            f'<i>Supuesto clave de cátedra:</i> El estudio de viabilidad por $800.000 es un <b>costo hundido</b> (irrelevante para la decisión), '
+            f'por lo que solo se activan y amortizan $1.200.000 de puesta en marcha ($240.000/año durante 5 años).</div>',
+            unsafe_allow_html=True
+        )
+
+    else:
+        df_c1_6 = pd.DataFrame([
+            {"Ejercicio": "1. Presupuesto $500M (Sucursales vs. Automatizar vs. Postergar)", "Respuesta Ejecutiva": "No se puede decidir por intuición. Se debe solicitar FCL proyectado, WACC, VAN, TIR y análisis de sensibilidad de cada opción. Abrir sucursales tiene mayor riesgo de mercado (demanda incierta); automatizar tiene menor riesgo (ahorro de costos controlable). Postergar tiene costo de oportunidad."},
+            {"Ejercicio": "2. Clasificación de Proyectos", "Respuesta Ejecutiva": "Sustituir máquina: Reemplazo/Reducción de costos | Filtros ambientales: Obligatorio/Normativo (no rentable por sí mismo) | Operaciones en Perú: Expansión geográfica/Nuevos mercados | Casino trabajadores: Bienestar/Indirecto | Línea vegana: Expansión de nuevos productos."},
+            {"Ejercicio": "3. Proyecto A (VAN $35M, TIR 18%) vs. Proyecto B (VAN $22M, TIR 24%)", "Respuesta Ejecutiva": "Ambos son aceptables (VAN > 0 y TIR > 14% exigido). Si son mutuamente excluyentes, el accionista debe elegir el Proyecto A porque maximiza la riqueza neta en pesos hoy ($35M > $22M). VAN y TIR difieren por el perfil temporal de los flujos y la tasa de reinversión implícita."},
+            {"Ejercicio": "4. Máquina A (VAN $120M, TIR 17%, PB 3a) vs. Máquina B (VAN $90M, TIR 24%, PB 2a)", "Respuesta Ejecutiva": "Escoger Máquina A: aporta $30.000.000 adicionales de valor neto para la empresa. La Máquina B recupera antes (2 años) pero genera menos riqueza total durante su vida útil."},
+            {"Ejercicio": "5. Nueva Planta bajo Incertidumbre (30% $250M, 50% $100M, 20% -$80M)", "Respuesta Ejecutiva": "E(VAN) = 0,3(250M) + 0,5(100M) + 0,2(-80M) = $109.000.000. Se recomienda invertir porque el valor esperado es ampliamente positivo, pero existe un 20% de probabilidad de destruir valor (-$80M). Mitigación: contratos de preventa, inversión modular por etapas o flexibilidad operativa."},
+            {"Ejercicio": "6. Proyecto VAN $150M, TIR 15%, WACC 10%, Payback 7 años (Política máx. 5 años)", "Respuesta Ejecutiva": "No debe rechazarse automáticamente. El proyecto crea $150M de riqueza neta y rinde 5 puntos sobre el WACC (15% > 10%). Usar solo el Payback ignora todos los flujos posteriores al año 5 y castiga proyectos estratégicos de maduración larga."}
+        ])
+        st.dataframe(df_c1_6, use_container_width=True, hide_index=True)
 
 # Script para ocultar elementos externos de Streamlit Cloud (corona roja, foto y barra inferior)
 components.html(
