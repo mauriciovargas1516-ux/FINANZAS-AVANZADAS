@@ -465,6 +465,303 @@ texto_interp_fci = (
     f"El apalancamiento financiero y el escudo fiscal de los intereses ({tasa_imp*100:.1f}%) incrementan la rentabilidad sobre el capital propio. Decisión: {decision_fci}."
 )
 
+# --- MODELO EJERCICIO 8 (10 AÑOS, AMPLIACIÓN, REEMPLAZO Y COSTO HUNDIDO) ---
+cols_e8 = [f"Año {t}" for t in range(11)]
+ing_e8 = [0] + [25000000]*2 + [30000000]*3 + [36000000]*5
+cv_fab_e8 = [0] + [-3000000]*5 + [-3420000]*5
+comis_e8 = [0] + [-500000]*2 + [-600000]*3 + [-720000]*5
+cf_fab_e8 = [0] + [-2000000]*5 + [-2200000]*5
+gav_e8 = [0] + [-800000]*5 + [-820000]*5
+dep_e8 = [0] + [-7800000]*5 + [-9200000]*5
+amo_e8 = [0] + [-240000]*5 + [0]*5
+vta_maq_e8 = [0]*8 + [2500000] + [0]*2
+vl_maq_e8 = [0]*8 + [-2000000] + [0]*2
+
+uai_e8 = [ing_e8[t]+cv_fab_e8[t]+comis_e8[t]+cf_fab_e8[t]+gav_e8[t]+dep_e8[t]+amo_e8[t]+vta_maq_e8[t]+vl_maq_e8[t] for t in range(11)]
+imp_e8 = [-max(0, uai_e8[t])*0.15 for t in range(11)]
+udi_e8 = [uai_e8[t]+imp_e8[t] for t in range(11)]
+rev_dep_e8 = [0] + [-dep_e8[t] for t in range(1, 11)]
+rev_amo_e8 = [0] + [-amo_e8[t] for t in range(1, 11)]
+rev_vl_e8 = [0]*8 + [2000000] + [0]*2
+
+inv_e8 = [-124100000, 0, 0, 0, 0, -20000000, 0, 0, -10000000, 0, 0]
+desecho_e8 = [0]*10 + [139117000]
+rec_ct_e8 = [0]*10 + [2900000]
+
+fcn_e8 = [udi_e8[t]+rev_dep_e8[t]+rev_amo_e8[t]+rev_vl_e8[t]+inv_e8[t]+desecho_e8[t]+rec_ct_e8[t] for t in range(11)]
+van_e8, tir_e8, pb_e8, vp_e8, _ = calc_metrics(fcn_e8, 0.12)
+
+df_err7 = pd.DataFrame([
+    {
+        "N° Error": "1. Inconsistencia de signos en Egresos, Depreciación e Inversiones",
+        "Evidencia en la Tabla del Asesor": "Materia prima Año 1 (+13.000.000), MOI Años 3-5 (+5.040.000 y +6.500.000), Insumos Años 1, 4 y 5 (+), Gastos Generales (+1.000.000), Depreciación (+4.845.000) e Inversiones Año 0 en Act. Nominales (+1.000.000) y Cap. Trabajo (+1.100.000).",
+        "Justificación Conceptual": "Los costos operativos, la depreciación pre-impuestos y los desembolsos de inversión en el Año 0 son salidas o deducciones y deben llevar signo negativo consistente. Mezclar signos distorsiona la Utilidad Antes de Impuestos y confunde la lectura contable."
+    },
+    {
+        "N° Error": "2. Omisión del reverso de la Depreciación después de impuestos",
+        "Evidencia en la Tabla del Asesor": "Después de la Utilidad Después de Impuestos solo se vuelve a sumar la Amortización (+200.000), pero se omite sumar de vuelta la Depreciación (+4.845.000).",
+        "Justificación Conceptual": "La depreciación no constituye un flujo de salida de efectivo real; solo se resta antes de impuestos para capturar su escudo fiscal. Al no reversarla después de impuestos, se subestima el Flujo de Caja Libre anual en $4.845.000."
+    },
+    {
+        "N° Error": "3. Multiplicación en vez de división por el Factor de Actualización",
+        "Evidencia en la Tabla del Asesor": "En el Año 1 el Flujo de Caja es $6.327.737 y el Flujo Actualizado sube a $7.273.260 (multiplicó 6.327.737 x 1,149425 en vez de dividir).",
+        "Justificación Conceptual": "Por el valor del dinero en el tiempo, un peso futuro vale menos hoy. Para traer flujos futuros a Valor Presente se debe dividir por (1 + r)^t o multiplicar por (1 + r)^(-t). El asesor capitalizó los flujos hacia el futuro en vez de descontarlos."
+    }
+])
+
+# Contenedor reservado arriba para el resumen y el botón Guardar (.xlsx)
+barra_superior = st.container()
+
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "Hoja1 (FCL)",
+    "Hoja2 (Amortización)",
+    "Hoja3 (Inversionista)",
+    "Hoja4 (Inversiones/IVA)",
+    "Hoja5 (Sensibilidad)",
+    "Hoja6 (Monte Carlo)",
+    "Hoja7 (Guía Repaso)"
+])
+
+with tab1:
+    st.dataframe(df_fcl_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
+    st.markdown(f'<div class="nota-celda">{texto_interp_fcl}</div>', unsafe_allow_html=True)
+
+with tab2:
+    st.dataframe(df_amort.style.format("{:,.0f}"), use_container_width=True, hide_index=True)
+
+with tab3:
+    st.dataframe(df_fci_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
+    st.markdown(f'<div class="nota-celda">{texto_interp_fci}</div>', unsafe_allow_html=True)
+
+with tab4:
+    st.dataframe(
+        df_inv_calc[["Ítem", "Valor Neto", "IVA (19%)", "Valor Bruto", "Vida Útil", "Valor Rescate", "Depreciación Anual", "Amortización Anual"]].style.format({
+            "Valor Neto": "{:,.0f}", "IVA (19%)": "{:,.0f}", "Valor Bruto": "{:,.0f}",
+            "Valor Rescate": "{:,.0f}", "Depreciación Anual": "{:,.0f}", "Amortización Anual": "{:,.0f}"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
+
+with tab5:
+    _, van_pes_fcl, tir_pes_fcl, pb_pes_fcl = construir_tabla_vista(es_inv=False, mult_ing=0.90)
+    _, van_opt_fcl, tir_opt_fcl, pb_opt_fcl = construir_tabla_vista(es_inv=False, mult_ing=1.10)
+    _, van_pes_fci, tir_pes_fci, pb_pes_fci = construir_tabla_vista(es_inv=True, mult_ing=0.90)
+    _, van_opt_fci, tir_opt_fci, pb_opt_fci = construir_tabla_vista(es_inv=True, mult_ing=1.10)
+
+    df_sens = pd.DataFrame([
+        {"Escenario": "Pesimista (-10% Ingresos)", "VAN FCL ($)": round(van_pes_fcl), "TIR FCL (%)": round(tir_pes_fcl*100, 2), "Payback FCL": pb_pes_fcl, "VAN Inversionista ($)": round(van_pes_fci), "TIR Inversionista (%)": round(tir_pes_fci*100, 2)},
+        {"Escenario": "Caso Base (100%)", "VAN FCL ($)": round(van_fcl), "TIR FCL (%)": round(tir_fcl*100, 2), "Payback FCL": pb_fcl, "VAN Inversionista ($)": round(van_fci), "TIR Inversionista (%)": round(tir_fci*100, 2)},
+        {"Escenario": "Optimista (+10% Ingresos)", "VAN FCL ($)": round(van_opt_fcl), "TIR FCL (%)": round(tir_opt_fcl*100, 2), "Payback FCL": pb_opt_fcl, "VAN Inversionista ($)": round(van_opt_fci), "TIR Inversionista (%)": round(tir_opt_fci*100, 2)},
+    ])
+    st.dataframe(df_sens, use_container_width=True, hide_index=True)
+
+    with st.expander("Calculadora de VAN Esperado por Probabilidades (Ej. 5 Guía)", expanded=False):
+        c_p1, c_p2, c_p3 = st.columns(3)
+        with c_p1:
+            prob_opt = st.number_input("Prob. Optimista (%)", value=30.0, step=5.0, help="Probabilidad asignada al escenario optimista.")
+            van_opt_in = st.number_input("VAN Optimista ($)", value=250000000.0, step=5000000.0, format="%.0f")
+        with c_p2:
+            prob_nor = st.number_input("Prob. Normal (%)", value=50.0, step=5.0, help="Probabilidad asignada al escenario base o normal.")
+            van_nor_in = st.number_input("VAN Normal ($)", value=100000000.0, step=5000000.0, format="%.0f")
+        with c_p3:
+            prob_pes = st.number_input("Prob. Pesimista (%)", value=20.0, step=5.0, help="Probabilidad asignada al escenario pesimista.")
+            van_pes_in = st.number_input("VAN Pesimista ($)", value=-80000000.0, step=5000000.0, format="%.0f")
+
+        van_esperado_disc = (prob_opt/100.0)*van_opt_in + (prob_nor/100.0)*van_nor_in + (prob_pes/100.0)*van_pes_in
+        desv_est_van = np.sqrt(
+            (prob_opt/100.0)*((van_opt_in - van_esperado_disc)**2) +
+            (prob_nor/100.0)*((van_nor_in - van_esperado_disc)**2) +
+            (prob_pes/100.0)*((van_pes_in - van_esperado_disc)**2)
+        )
+        st.markdown(
+            f'<div class="nota-celda"><b>Resultado VAN Esperado E(VAN):</b> ${van_esperado_disc:,.0f} &nbsp;|&nbsp; '
+            f'<b>Desviación Estándar (Riesgo):</b> ${desv_est_van:,.0f} &nbsp;|&nbsp; '
+            f'<b>Coeficiente de Variación:</b> {(desv_est_van/abs(van_esperado_disc) if van_esperado_disc != 0 else 0):.2f} '
+            f'{"(ACEPTAR: E(VAN) > 0, pero monitorear probabilidad de pérdida de " + str(prob_pes) + "%)" if van_esperado_disc > 0 else "(RECHAZAR)"}</div>',
+            unsafe_allow_html=True
+        )
+
+with tab6:
+    st.caption("Simulación Estocástica de Monte Carlo (10.000 Iteraciones Triangulares sobre el Caso Activo)")
+    mc_c1, mc_c2, mc_c3, mc_c4 = st.columns(4)
+    with mc_c1:
+        ing_min_pct = st.number_input(
+            "Ingresos Mín. (% del Base)", value=80.0, step=5.0,
+            help="Porcentaje de los ingresos proyectados en el peor escenario razonable (ej. 80% equivale a una caída del 20%)."
+        )
+        ing_max_pct = st.number_input(
+            "Ingresos Máx. (% del Base)", value=125.0, step=5.0,
+            help="Porcentaje de los ingresos proyectados en un escenario comercial favorable (ej. 125% equivale a un alza del 25%)."
+        )
+    with mc_c2:
+        cv_min_pct = st.number_input(
+            "Costo Var. Mín. (% del Base)", value=85.0, step=5.0,
+            help="Porcentaje del costo variable en caso de eficiencias o descuentos por volumen."
+        )
+        cv_max_pct = st.number_input(
+            "Costo Var. Máx. (% del Base)", value=120.0, step=5.0,
+            help="Porcentaje del costo variable si suben las materias primas o insumos."
+        )
+    with mc_c3:
+        cf_min_pct = st.number_input(
+            "Costo Fijo Mín. (% del Base)", value=95.0, step=5.0,
+            help="Variación mínima de los costos fijos anuales."
+        )
+        cf_max_pct = st.number_input(
+            "Costo Fijo Máx. (% del Base)", value=110.0, step=5.0,
+            help="Variación máxima de los costos fijos anuales por inflación o imprevistos."
+        )
+    with mc_c4:
+        tipo_flujo_mc = st.selectbox(
+            "Flujo a Simular",
+            ["Flujo de Caja Libre (FCL)", "Flujo Inversionista (FCI)"],
+            help="Elige si deseas evaluar el riesgo del proyecto puro (FCL) o el riesgo para el accionista con deuda (FCI)."
+        )
+        semilla_mc = st.number_input(
+            "Iteraciones", value=10000, min_value=1000, max_value=50000, step=1000,
+            help="Número de escenarios aleatorios evaluados mediante distribución triangular año a año."
+        )
+
+    es_fci_mc = "Inversionista" in tipo_flujo_mc
+    n_iter = int(semilla_mc)
+    tasa_mc = tasa_ke if es_fci_mc else tasa_fcl_usada
+
+    inv0_mc = -total_inv_neta + (monto_credito if (es_fci_mc and incluir_prestamo_fci0) else 0.0)
+    van_mc = np.full(n_iter, inv0_mc, dtype=float)
+
+    np.random.seed(42)
+    f_ing_min, f_ing_max = min(ing_min_pct, 100.0)/100.0, max(ing_max_pct, 100.01)/100.0
+    f_cv_min, f_cv_max = min(cv_min_pct, 100.0)/100.0, max(cv_max_pct, 100.01)/100.0
+    f_cf_min, f_cf_max = min(cf_min_pct, 100.0)/100.0, max(cf_max_pct, 100.01)/100.0
+
+    for t in range(horizonte):
+        mult_i = np.random.triangular(f_ing_min, 1.0, f_ing_max, n_iter)
+        mult_v = np.random.triangular(f_cv_min, 1.0, f_cv_max, n_iter)
+        mult_f = np.random.triangular(f_cf_min, 1.0, f_cf_max, n_iter)
+
+        ing_sim = ing_series[t] * mult_i
+        cv_sim = cv_series[t] * mult_v
+        cf_sim = cf_series[t] * mult_f
+        int_sim = intereses_anuales[t] if es_fci_mc else 0.0
+
+        bai_sim = ing_sim - cv_sim - cf_sim - dep_anual_total - amort_anual_total - int_sim
+        imp_sim = bai_sim * tasa_imp
+        bdi_sim = bai_sim - imp_sim
+
+        am_deuda_sim = amort_deuda_anuales[t] if es_fci_mc else 0.0
+        resc_sim = (total_rescate_af + total_recup_ct) if t == horizonte - 1 else 0.0
+
+        fn_sim = bdi_sim + dep_anual_total + amort_anual_total - am_deuda_sim + resc_sim
+        van_mc += fn_sim / ((1.0 + tasa_mc) ** (t + 1))
+
+    van_prom_mc = float(van_mc.mean())
+    van_min_mc = float(van_mc.min())
+    van_max_mc = float(van_mc.max())
+    mediana_mc = float(np.median(van_mc))
+    prob_exito_mc = float((van_mc >= 0).mean() * 100.0)
+    riesgo_dest_mc = 100.0 - prob_exito_mc
+    var_95_mc = float(np.percentile(van_mc, 5))
+
+    k_mc1, k_mc2, k_mc3, k_mc4 = st.columns(4)
+    k_mc1.metric(
+        "VAN Promedio Simulado", f"${van_prom_mc:,.0f}",
+        help="Promedio de riqueza neta creada tras simular los escenarios."
+    )
+    k_mc2.metric(
+        "Probabilidad de Éxito (VAN >= 0)", f"{prob_exito_mc:.2f}%",
+        help="Porcentaje de universos simulados en los que el proyecto supera la tasa exigida."
+    )
+    k_mc3.metric(
+        "Riesgo Destrucción Valor", f"{riesgo_dest_mc:.2f}%",
+        help="Porcentaje de escenarios donde el VAN resulta negativo."
+    )
+    k_mc4.metric(
+        "VaR 95% (Percentil 5%)", f"${var_95_mc:,.0f}",
+        help="Valor en Riesgo: Con un 95% de confianza, el VAN no caerá por debajo de este monto."
+    )
+
+    conteos, bordes = np.histogram(van_mc, bins=35)
+    etiquetas_bins = [f"${(bordes[i]+bordes[i+1])/2000000:,.1f}M" for i in range(len(conteos))]
+    df_hist = pd.DataFrame({
+        "Rango VAN ($ Millones)": etiquetas_bins,
+        "Frecuencia (Escenarios)": conteos
+    }).set_index("Rango VAN ($ Millones)")
+    st.bar_chart(df_hist, height=260, color="#107c41")
+
+    df_resumen_mc = pd.DataFrame([
+        {
+            "Métrica Monte Carlo": "VAN Promedio Esperado",
+            "Valor ($ / %)": f"${van_prom_mc:,.0f}",
+            "Peor Escenario (Mín)": f"${van_min_mc:,.0f}",
+            "Mejor Escenario (Máx)": f"${van_max_mc:,.0f}",
+            "Percentil 5% (VaR 95%)": f"${var_95_mc:,.0f}",
+            "Mediana (P50)": f"${mediana_mc:,.0f}",
+            "Prob. Éxito (%)": f"{prob_exito_mc:.2f}%"
+        }
+    ])
+    st.dataframe(df_resumen_mc, use_container_width=True, hide_index=True)
+
+    texto_interp_mc = (
+        f"Conclusión Estocástica ({tipo_flujo_mc}): Tras evaluar {n_iter:,} escenarios con distribución triangular "
+        f"y tasa de descuento de {tasa_mc*100:.2f}%, el proyecto presenta una probabilidad de éxito comercial de {prob_exito_mc:.2f}% "
+        f"y un VAN medio de ${van_prom_mc:,.0f}. En el 5% de los peores escenarios (VaR 95%), el VAN se sitúa en ${var_95_mc:,.0f}."
+    )
+    st.markdown(f'<div class="nota-celda">{texto_interp_mc}</div>', unsafe_allow_html=True)
+
+with tab7:
+    st.caption("Pauta de Auditoría y Resolución: Guía de Análisis - Inversión en Activos Reales")
+    guia_selec = st.selectbox(
+        "Seleccionar Ejercicio de la Guía",
+        [
+            "Ejercicio 7: Auditoría de los 3 Errores del Flujo de Caja (Conservas)",
+            "Ejercicio 8: Proyecto a 10 años (Ampliación, Reemplazo y Costo Hundido)",
+            "Ejercicios 1 al 6: Respuestas Conceptuales y Criterios VAN vs. TIR vs. Payback"
+        ]
+    )
+
+    if "Ejercicio 7" in guia_selec:
+        st.dataframe(df_err7, use_container_width=True, hide_index=True)
+        st.markdown(
+            '<div class="nota-celda"><b>Nota práctica:</b> Para ver este flujo corregido y cuadrado al peso, '
+            'selecciona <b>"Caso 3 - Conservas (13M)"</b> en el menú lateral izquierdo y revisa la <b>Hoja1 (FCL)</b>.</div>',
+            unsafe_allow_html=True
+        )
+
+    elif "Ejercicio 8" in guia_selec:
+        df_e8 = pd.DataFrame(
+            [ing_e8, cv_fab_e8, comis_e8, cf_fab_e8, gav_e8, dep_e8, amo_e8, vta_maq_e8, vl_maq_e8, uai_e8, imp_e8, udi_e8, rev_dep_e8, rev_amo_e8, rev_vl_e8, inv_e8, desecho_e8, rec_ct_e8, fcn_e8, [round(x) for x in vp_e8]],
+            index=[
+                "(+) Ingresos", "(-) Costos Var. Fabricación", "(-) Comisiones (2%)", "(-) Costos Fijos Fab.",
+                "(-) Gastos Adm. y Ventas", "(-) Depreciación", "(-) Amort. Intangibles", "(+) Venta Máquina Usada",
+                "(-) Valor Libro Máquina", "(=) Utilidad Antes Impuestos", "(-) Impuesto (15%)", "(=) Utilidad Neta",
+                "(+) Depreciación", "(+) Amort. Intangibles", "(+) Valor Libro Máquina", "(-) Inversiones (Capex/CT)",
+                "(+) Valor de Desecho", "(+) Recup. Cap. Trabajo", "(=) FLUJO DE CAJA NETO", "Flujo Actualizado (12%)"
+            ],
+            columns=cols_e8
+        )
+        st.dataframe(df_e8.style.format("{:,.0f}"), use_container_width=True, height=420)
+        st.markdown(
+            f'<div class="nota-celda"><b>Resultado Ejercicio 8 (10 años, Tasa 12%, Impuesto 15%):</b> '
+            f'VAN = <b>${van_e8:,.0f}</b> | TIR = <b>{tir_e8*100:.2f}%</b> | Payback = <b>{pb_e8}</b>. '
+            f'<i>Supuesto clave de cátedra:</i> El estudio de viabilidad por $800.000 es un <b>costo hundido</b> (irrelevante para la decisión), '
+            f'por lo que solo se activan y amortizan $1.200.000 de puesta en marcha ($240.000/año durante 5 años).</div>',
+            unsafe_allow_html=True
+        )
+
+    else:
+        df_c1_6 = pd.DataFrame([
+            {"Ejercicio": "1. Presupuesto $500M (Sucursales vs. Automatizar vs. Postergar)", "Respuesta Ejecutiva": "No se puede decidir por intuición. Se debe solicitar FCL proyectado, WACC, VAN, TIR y análisis de sensibilidad de cada opción. Abrir sucursales tiene mayor riesgo de mercado (demanda incierta); automatizar tiene menor riesgo (ahorro de costos controlable). Postergar tiene costo de oportunidad."},
+            {"Ejercicio": "2. Clasificación de Proyectos", "Respuesta Ejecutiva": "Sustituir máquina: Reemplazo/Reducción de costos | Filtros ambientales: Obligatorio/Normativo (no rentable por sí mismo) | Operaciones en Perú: Expansión geográfica/Nuevos mercados | Casino trabajadores: Bienestar/Indirecto | Línea vegana: Expansión de nuevos productos."},
+            {"Ejercicio": "3. Proyecto A (VAN $35M, TIR 18%) vs. Proyecto B (VAN $22M, TIR 24%)", "Respuesta Ejecutiva": "Ambos son aceptables (VAN > 0 y TIR > 14% exigido). Si son mutuamente excluyentes, el accionista debe elegir el Proyecto A porque maximiza la riqueza neta en pesos hoy ($35M > $22M). VAN y TIR difieren por el perfil temporal de los flujos y la tasa de reinversión implícita."},
+            {"Ejercicio": "4. Máquina A (VAN $120M, TIR 17%, PB 3a) vs. Máquina B (VAN $90M, TIR 24%, PB 2a)", "Respuesta Ejecutiva": "Escoger Máquina A: aporta $30.000.000 adicionales de valor neto para la empresa. La Máquina B recupera antes (2 años) pero genera menos riqueza total durante su vida útil."},
+            {"Ejercicio": "5. Nueva Planta bajo Incertidumbre (30% $250M, 50% $100M, 20% -$80M)", "Respuesta Ejecutiva": "E(VAN) = 0,3(250M) + 0,5(100M) + 0,2(-80M) = $109.000.000. Se recomienda invertir porque el valor esperado es ampliamente positivo, pero existe un 20% de probabilidad de destruir valor (-$80M). Mitigación: contratos de preventa, inversión modular por etapas o flexibilidad operativa."},
+            {"Ejercicio": "6. Proyecto VAN $150M, TIR 15%, WACC 10%, Payback 7 años (Política máx. 5 años)", "Respuesta Ejecutiva": "No debe rechazarse automáticamente. El proyecto crea $150M de riqueza neta y rinde 5 puntos sobre el WACC (15% > 10%). Usar solo el Payback ignora todos los flujos posteriores al año 5 y castiga proyectos estratégicos de maduración larga."}
+        ])
+        st.dataframe(df_c1_6, use_container_width=True, hide_index=True)
+
+
+# --- GENERADOR DE EXCEL CON 6 HOJAS COMPLETAS (INCLUYE MONTE CARLO Y EJERCICIO 8) ---
 def generar_excel_monocromatico():
     wb = openpyxl.Workbook()
     wb.calculation.fullCalcOnLoad = True
@@ -476,6 +773,7 @@ def generar_excel_monocromatico():
     num_fmt_curr = "#,##0;(#,##0);\"-\""
     num_fmt_pct = "0.00%"
 
+    # ================= HOJA 1: PARÁMETROS E INVERSIONES =================
     ws1 = wb.active
     ws1.title = "Hoja1"
     ws1["B2"] = "Parámetros y Supuestos"
@@ -564,6 +862,7 @@ def generar_excel_monocromatico():
     c_loan.number_format = num_fmt_curr
     c_loan.font = font_bold
 
+    # ================= HOJA 3: TABLA DE AMORTIZACIÓN =================
     ws3 = wb.create_sheet("Hoja3")
     ws3["B2"] = "Tabla de Amortización"
     ws3["B2"].font = font_bold
@@ -607,6 +906,7 @@ def generar_excel_monocromatico():
         for c_item in [c_cuota, c_int, c_am, c_sal]:
             c_item.number_format = num_fmt_curr
 
+    # ================= FUNCIÓN HOJAS 2 Y 4 (FCL Y FCI) =================
     def poblar_hoja_flujo(ws, es_inversionista=False):
         titulo = "Flujo de Caja Inversionista" if es_inversionista else "Flujo de Caja Libre"
         ws["B2"] = titulo
@@ -618,7 +918,7 @@ def generar_excel_monocromatico():
         for t in range(horizonte + 1):
             c = ws.cell(4, 3 + t, t)
             c.font = font_bold
-            c_hdr.border = border_bottom
+            c.border = border_bottom
             c.alignment = Alignment(horizontal="right")
 
         filas_labels = [
@@ -748,10 +1048,213 @@ def generar_excel_monocromatico():
     ws4 = wb.create_sheet("Hoja4")
     poblar_hoja_flujo(ws4, es_inversionista=True)
 
-    wb._sheets = [ws1, ws2, ws3, ws4]
+    # ================= HOJA 5: SENSIBILIDAD Y MONTE CARLO =================
+    ws5 = wb.create_sheet("Hoja5")
+    ws5["B2"] = "Análisis de Sensibilidad y Simulación de Monte Carlo"
+    ws5["B2"].font = font_bold
+    ws5["B2"].border = border_bottom
+
+    ws5["B4"] = "1. Sensibilidad por Escenarios de Ingresos (±10%)"
+    ws5["B4"].font = font_bold
+
+    headers_s = ["Escenario", "VAN FCL ($)", "TIR FCL (%)", "Payback FCL", "VAN Inversionista ($)", "TIR Inversionista (%)"]
+    for idx_h, h_text in enumerate(headers_s, start=2):
+        c = ws5.cell(5, idx_h, h_text)
+        c.font = font_bold
+        c.border = border_bottom
+
+    for r_i, row_s in df_sens.iterrows():
+        curr_r = 6 + r_i
+        ws5.cell(curr_r, 2, str(row_s["Escenario"])).font = font_reg
+        c_vfcl = ws5.cell(curr_r, 3, float(row_s["VAN FCL ($)"]))
+        c_vfcl.number_format = num_fmt_curr
+        c_tfcl = ws5.cell(curr_r, 4, float(row_s["TIR FCL (%)"]) / 100.0)
+        c_tfcl.number_format = num_fmt_pct
+        ws5.cell(curr_r, 5, str(row_s["Payback FCL"])).font = font_reg
+        c_vfci = ws5.cell(curr_r, 6, float(row_s["VAN Inversionista ($)"]))
+        c_vfci.number_format = num_fmt_curr
+        c_tfci = ws5.cell(curr_r, 7, float(row_s["TIR Inversionista (%)"]) / 100.0)
+        c_tfci.number_format = num_fmt_pct
+
+    # Sección Ejercicio 5 de la Guía (VAN Esperado con fórmula SUMPRODUCT)
+    ws5["B10"] = "2. Evaluación bajo Incertidumbre (Ejercicio 5 Guía)"
+    ws5["B10"].font = font_bold
+    for idx_h, h_text in enumerate(["Escenario", "Probabilidad", "VAN Escenario ($)"], start=2):
+        c = ws5.cell(11, idx_h, h_text)
+        c.font = font_bold
+        c.border = border_bottom
+
+    esc_ej5 = [
+        ("Optimista", float(prob_opt)/100.0, float(van_opt_in)),
+        ("Normal", float(prob_nor)/100.0, float(van_nor_in)),
+        ("Pesimista", float(prob_pes)/100.0, float(van_pes_in))
+    ]
+    for idx_e, (nom_e, pr_e, v_e) in enumerate(esc_ej5, start=12):
+        ws5.cell(idx_e, 2, nom_e).font = font_reg
+        c_p = ws5.cell(idx_e, 3, pr_e)
+        c_p.number_format = num_fmt_pct
+        c_v = ws5.cell(idx_e, 4, v_e)
+        c_v.number_format = num_fmt_curr
+
+    ws5.cell(15, 2, "VAN Esperado E(VAN)").font = font_bold
+    ws5.cell(15, 2).border = border_total
+    c_evan = ws5.cell(15, 4, "=SUMPRODUCT(C12:C14,D12:D14)")
+    c_evan.font = font_bold
+    c_evan.border = border_total
+    c_evan.number_format = num_fmt_curr
+
+    # Sección Resultados Simulación de Monte Carlo
+    ws5["B18"] = f"3. Resultados Simulación de Monte Carlo ({n_iter:,} Iteraciones - {tipo_flujo_mc})"
+    ws5["B18"].font = font_bold
+
+    ws5.cell(19, 2, "Métrica Financiera Corporativa").font = font_bold
+    ws5.cell(19, 2).border = border_bottom
+    ws5.cell(19, 3, "Valor").font = font_bold
+    ws5.cell(19, 3).border = border_bottom
+
+    metricas_mc_rows = [
+        ("VAN Promedio Esperado (Después de Impuestos)", van_prom_mc, num_fmt_curr),
+        ("Mediana Simulación (Percentil 50%)", mediana_mc, num_fmt_curr),
+        ("Peor Escenario Simulado (Mínimo)", van_min_mc, num_fmt_curr),
+        ("Mejor Escenario Simulado (Máximo)", van_max_mc, num_fmt_curr),
+        ("Value at Risk - VaR 95% (Percentil 5%)", var_95_mc, num_fmt_curr),
+        ("Probabilidad de Éxito Comercial (VAN >= $0)", prob_exito_mc / 100.0, num_fmt_pct),
+        ("Riesgo de Destrucción de Valor (VAN < $0)", riesgo_dest_mc / 100.0, num_fmt_pct),
+    ]
+    for idx_m, (m_lbl, m_val, m_fmt) in enumerate(metricas_mc_rows, start=20):
+        c_l = ws5.cell(idx_m, 2, m_lbl)
+        c_l.font = font_bold if idx_m in [20, 25] else font_reg
+        c_v = ws5.cell(idx_m, 3, m_val)
+        c_v.font = font_bold if idx_m in [20, 25] else font_reg
+        c_v.number_format = m_fmt
+
+    ws5.cell(28, 2, "Conclusión Monte Carlo:").font = font_bold
+    ws5.merge_cells("B29:G30")
+    c_mc_txt = ws5.cell(29, 2, texto_interp_mc)
+    c_mc_txt.alignment = Alignment(wrap_text=True, vertical="top")
+
+    # Tabla de Frecuencias del Histograma en columnas I y J de Hoja5
+    ws5["I4"] = "Distribución de Frecuencias (Histograma)"
+    ws5["I4"].font = font_bold
+    ws5.cell(5, 9, "Rango VAN ($ Millones)").font = font_bold
+    ws5.cell(5, 9).border = border_bottom
+    ws5.cell(5, 10, "Frecuencia (Escenarios)").font = font_bold
+    ws5.cell(5, 10).border = border_bottom
+    for i_bin, (etq, cnt) in enumerate(zip(etiquetas_bins, conteos), start=6):
+        ws5.cell(i_bin, 9, etq).font = font_reg
+        ws5.cell(i_bin, 10, int(cnt)).font = font_reg
+
+    # ================= HOJA 6: EJERCICIO 8 (10 AÑOS) Y AUDITORÍA EJ. 7 =================
+    ws6 = wb.create_sheet("Hoja6")
+    ws6["B2"] = "Ejercicio 8: Flujo de Caja a 10 Años (Ampliación, Reemplazo y Costo Hundido)"
+    ws6["B2"].font = font_bold
+
+    c_h6 = ws6.cell(4, 2, "Ítem / Año")
+    c_h6.font = font_bold
+    c_h6.border = border_bottom
+    for t in range(11):
+        c = ws6.cell(4, 3 + t, t)
+        c.font = font_bold
+        c.border = border_bottom
+        c.alignment = Alignment(horizontal="right")
+
+    filas_e8_meta = [
+        (5, "(+) Ingresos", ing_e8, False),
+        (6, "(-) Costos Var. Fabricación", cv_fab_e8, False),
+        (7, "(-) Comisiones (2%)", comis_e8, False),
+        (8, "(-) Costos Fijos Fab.", cf_fab_e8, False),
+        (9, "(-) Gastos Adm. y Ventas", gav_e8, False),
+        (10, "(-) Depreciación", dep_e8, False),
+        (11, "(-) Amort. Intangibles (Puesta en Marcha)", amo_e8, False),
+        (12, "(+) Venta Máquina Usada", vta_maq_e8, False),
+        (13, "(-) Valor Libro Máquina", vl_maq_e8, False),
+        (14, "(=) Utilidad Antes de Impuestos", None, True),
+        (15, "(-) Impuesto (15%)", None, False),
+        (16, "(=) Utilidad Neta", None, True),
+        (17, "(+) Depreciación", rev_dep_e8, False),
+        (18, "(+) Amort. Intangibles", rev_amo_e8, False),
+        (19, "(+) Valor Libro Máquina", rev_vl_e8, False),
+        (20, "(-) Inversiones (Capex y Cap. Trabajo)", inv_e8, False),
+        (21, "(+) Valor de Desecho", desecho_e8, False),
+        (22, "(+) Recup. Capital de Trabajo", rec_ct_e8, False),
+        (23, "(=) FLUJO DE CAJA NETO", None, True),
+        (24, "Factor Actualización (12%)", None, False),
+        (25, "Flujo Actualizado (VP)", None, False),
+    ]
+
+    for r_num, lbl, serie_vals, es_negrita in filas_e8_meta:
+        c_l = ws6.cell(r_num, 2, lbl)
+        c_l.font = font_bold if es_negrita else font_reg
+        if r_num == 23:
+            c_l.border = border_total
+
+        for t in range(11):
+            col_i = 3 + t
+            col_let = get_column_letter(col_i)
+            c_val = ws6.cell(r_num, col_i)
+
+            if serie_vals is not None:
+                c_val.value = float(serie_vals[t])
+                c_val.number_format = num_fmt_curr
+            elif r_num == 14:
+                c_val.value = f"=SUM({col_let}5:{col_let}13)"
+                c_val.font = font_bold
+                c_val.number_format = num_fmt_curr
+            elif r_num == 15:
+                c_val.value = f"=IF({col_let}14>0,-{col_let}14*0.15,0)"
+                c_val.number_format = num_fmt_curr
+            elif r_num == 16:
+                c_val.value = f"=SUM({col_let}14:{col_let}15)"
+                c_val.font = font_bold
+                c_val.number_format = num_fmt_curr
+            elif r_num == 23:
+                c_val.value = f"=SUM({col_let}16:{col_let}22)"
+                c_val.font = font_bold
+                c_val.border = border_total
+                c_val.number_format = num_fmt_curr
+            elif r_num == 24:
+                c_val.value = f"=(1/(1+0.12))^{col_let}4"
+                c_val.number_format = "0.0000"
+            elif r_num == 25:
+                c_val.value = f"={col_let}23*{col_let}24"
+                c_val.number_format = num_fmt_curr
+
+    ws6.cell(27, 2, "VAN (Suma VP al 12%)").font = font_bold
+    c_ve8_1 = ws6.cell(27, 3, "=SUM(C25:M25)")
+    c_ve8_1.font = font_bold
+    c_ve8_1.number_format = num_fmt_curr
+
+    ws6.cell(28, 2, "VAN (Fórmula VNA)").font = font_bold
+    c_ve8_2 = ws6.cell(28, 3, "=C23+NPV(0.12,D23:M23)")
+    c_ve8_2.font = font_bold
+    c_ve8_2.number_format = num_fmt_curr
+
+    ws6.cell(29, 2, "TIR").font = font_bold
+    c_te8 = ws6.cell(29, 3, "=IRR(C23:M23)")
+    c_te8.font = font_bold
+    c_te8.number_format = num_fmt_pct
+
+    ws6.cell(30, 2, "Payback").font = font_bold
+    ws6.cell(30, 3, pb_e8).font = font_bold
+
+    # Resumen Auditoría Ejercicio 7 debajo del flujo en Hoja6
+    ws6["B33"] = "Ejercicio 7: Auditoría de los 3 Errores del Flujo de Caja"
+    ws6["B33"].font = font_bold
+    for idx_h, h_text in enumerate(["N° Error Detectado", "Evidencia en el Flujo", "Justificación Conceptual"], start=2):
+        c = ws6.cell(34, idx_h, h_text)
+        c.font = font_bold
+        c.border = border_bottom
+
+    for i_err, r_err in df_err7.iterrows():
+        curr_r = 35 + i_err
+        ws6.cell(curr_r, 2, str(r_err["N° Error"])).font = font_bold
+        ws6.cell(curr_r, 3, str(r_err["Evidencia en la Tabla del Asesor"])).font = font_reg
+        ws6.cell(curr_r, 4, str(r_err["Justificación Conceptual"])).font = font_reg
+
+    wb._sheets = [ws1, ws2, ws3, ws4, ws5, ws6]
 
     for sheet in wb.worksheets:
-        sheet.column_dimensions["B"].width = 34
+        sheet.column_dimensions["B"].width = 36
         for col_i in range(3, 15):
             sheet.column_dimensions[get_column_letter(col_i)].width = 16
 
@@ -761,316 +1264,21 @@ def generar_excel_monocromatico():
 
 excel_bytes = generar_excel_monocromatico()
 
-top_left, top_right = st.columns([5.5, 1])
-with top_left:
-    st.caption(
-        f"Inv. Neta: ${total_inv_neta:,.0f}  |  Inv. Bruta: ${total_inv_bruta:,.0f}  |  "
-        f"Crédito: ${monto_credito:,.0f}  |  Cuota PAGO: ${cuota_anual:,.0f}  |  WACC: {wacc_calc*100:.2f}%"
-    )
-with top_right:
-    st.download_button(
-        label="Guardar (.xlsx)",
-        data=excel_bytes,
-        file_name="Libro1.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
-
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "Hoja1 (FCL)",
-    "Hoja2 (Amortización)",
-    "Hoja3 (Inversionista)",
-    "Hoja4 (Inversiones/IVA)",
-    "Hoja5 (Sensibilidad)",
-    "Hoja6 (Monte Carlo)",
-    "Hoja7 (Guía Repaso)"
-])
-
-with tab1:
-    st.dataframe(df_fcl_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
-    st.markdown(f'<div class="nota-celda">{texto_interp_fcl}</div>', unsafe_allow_html=True)
-
-with tab2:
-    st.dataframe(df_amort.style.format("{:,.0f}"), use_container_width=True, hide_index=True)
-
-with tab3:
-    st.dataframe(df_fci_vista.style.format("{:,.0f}"), use_container_width=True, height=450)
-    st.markdown(f'<div class="nota-celda">{texto_interp_fci}</div>', unsafe_allow_html=True)
-
-with tab4:
-    st.dataframe(
-        df_inv_calc[["Ítem", "Valor Neto", "IVA (19%)", "Valor Bruto", "Vida Útil", "Valor Rescate", "Depreciación Anual", "Amortización Anual"]].style.format({
-            "Valor Neto": "{:,.0f}", "IVA (19%)": "{:,.0f}", "Valor Bruto": "{:,.0f}",
-            "Valor Rescate": "{:,.0f}", "Depreciación Anual": "{:,.0f}", "Amortización Anual": "{:,.0f}"
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-with tab5:
-    _, van_pes_fcl, tir_pes_fcl, pb_pes_fcl = construir_tabla_vista(es_inv=False, mult_ing=0.90)
-    _, van_opt_fcl, tir_opt_fcl, pb_opt_fcl = construir_tabla_vista(es_inv=False, mult_ing=1.10)
-    _, van_pes_fci, tir_pes_fci, pb_pes_fci = construir_tabla_vista(es_inv=True, mult_ing=0.90)
-    _, van_opt_fci, tir_opt_fci, pb_opt_fci = construir_tabla_vista(es_inv=True, mult_ing=1.10)
-
-    df_sens = pd.DataFrame([
-        {"Escenario": "Pesimista (-10% Ingresos)", "VAN FCL ($)": round(van_pes_fcl), "TIR FCL (%)": round(tir_pes_fcl*100, 2), "Payback FCL": pb_pes_fcl, "VAN Inversionista ($)": round(van_pes_fci), "TIR Inversionista (%)": round(tir_pes_fci*100, 2)},
-        {"Escenario": "Caso Base (100%)", "VAN FCL ($)": round(van_fcl), "TIR FCL (%)": round(tir_fcl*100, 2), "Payback FCL": pb_fcl, "VAN Inversionista ($)": round(van_fci), "TIR Inversionista (%)": round(tir_fci*100, 2)},
-        {"Escenario": "Optimista (+10% Ingresos)", "VAN FCL ($)": round(van_opt_fcl), "TIR FCL (%)": round(tir_opt_fcl*100, 2), "Payback FCL": pb_opt_fcl, "VAN Inversionista ($)": round(van_opt_fci), "TIR Inversionista (%)": round(tir_opt_fci*100, 2)},
-    ])
-    st.dataframe(df_sens, use_container_width=True, hide_index=True)
-
-    with st.expander("Calculadora de VAN Esperado por Probabilidades (Ej. 5 Guía)", expanded=False):
-        c_p1, c_p2, c_p3 = st.columns(3)
-        with c_p1:
-            prob_opt = st.number_input("Prob. Optimista (%)", value=30.0, step=5.0, help="Probabilidad asignada al escenario optimista.")
-            van_opt_in = st.number_input("VAN Optimista ($)", value=250000000.0, step=5000000.0, format="%.0f")
-        with c_p2:
-            prob_nor = st.number_input("Prob. Normal (%)", value=50.0, step=5.0, help="Probabilidad asignada al escenario base o normal.")
-            van_nor_in = st.number_input("VAN Normal ($)", value=100000000.0, step=5000000.0, format="%.0f")
-        with c_p3:
-            prob_pes = st.number_input("Prob. Pesimista (%)", value=20.0, step=5.0, help="Probabilidad asignada al escenario pesimista.")
-            van_pes_in = st.number_input("VAN Pesimista ($)", value=-80000000.0, step=5000000.0, format="%.0f")
-
-        van_esperado_disc = (prob_opt/100.0)*van_opt_in + (prob_nor/100.0)*van_nor_in + (prob_pes/100.0)*van_pes_in
-        desv_est_van = np.sqrt(
-            (prob_opt/100.0)*((van_opt_in - van_esperado_disc)**2) +
-            (prob_nor/100.0)*((van_nor_in - van_esperado_disc)**2) +
-            (prob_pes/100.0)*((van_pes_in - van_esperado_disc)**2)
+with barra_superior:
+    top_left, top_right = st.columns([5.5, 1])
+    with top_left:
+        st.caption(
+            f"Inv. Neta: ${total_inv_neta:,.0f}  |  Inv. Bruta: ${total_inv_bruta:,.0f}  |  "
+            f"Crédito: ${monto_credito:,.0f}  |  Cuota PAGO: ${cuota_anual:,.0f}  |  WACC: {wacc_calc*100:.2f}%"
         )
-        st.markdown(
-            f'<div class="nota-celda"><b>Resultado VAN Esperado E(VAN):</b> ${van_esperado_disc:,.0f} &nbsp;|&nbsp; '
-            f'<b>Desviación Estándar (Riesgo):</b> ${desv_est_van:,.0f} &nbsp;|&nbsp; '
-            f'<b>Coeficiente de Variación:</b> {(desv_est_van/abs(van_esperado_disc) if van_esperado_disc != 0 else 0):.2f} '
-            f'{"(ACEPTAR: E(VAN) > 0, pero monitorear probabilidad de pérdida de " + str(prob_pes) + "%)" if van_esperado_disc > 0 else "(RECHAZAR)"}</div>',
-            unsafe_allow_html=True
+    with top_right:
+        st.download_button(
+            label="Guardar (.xlsx)",
+            data=excel_bytes,
+            file_name="Libro1.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
         )
-
-with tab6:
-    st.caption("Simulación Estocástica de Monte Carlo (10.000 Iteraciones Triangulares sobre el Caso Activo)")
-    mc_c1, mc_c2, mc_c3, mc_c4 = st.columns(4)
-    with mc_c1:
-        ing_min_pct = st.number_input(
-            "Ingresos Mín. (% del Base)", value=80.0, step=5.0,
-            help="Porcentaje de los ingresos proyectados en el peor escenario razonable (ej. 80% equivale a una caída del 20%)."
-        )
-        ing_max_pct = st.number_input(
-            "Ingresos Máx. (% del Base)", value=125.0, step=5.0,
-            help="Porcentaje de los ingresos proyectados en un escenario comercial favorable (ej. 125% equivale a un alza del 25%)."
-        )
-    with mc_c2:
-        cv_min_pct = st.number_input(
-            "Costo Var. Mín. (% del Base)", value=85.0, step=5.0,
-            help="Porcentaje del costo variable en caso de eficiencias o descuentos por volumen."
-        )
-        cv_max_pct = st.number_input(
-            "Costo Var. Máx. (% del Base)", value=120.0, step=5.0,
-            help="Porcentaje del costo variable si suben las materias primas o insumos."
-        )
-    with mc_c3:
-        cf_min_pct = st.number_input(
-            "Costo Fijo Mín. (% del Base)", value=95.0, step=5.0,
-            help="Variación mínima de los costos fijos anuales."
-        )
-        cf_max_pct = st.number_input(
-            "Costo Fijo Máx. (% del Base)", value=110.0, step=5.0,
-            help="Variación máxima de los costos fijos anuales por inflación o imprevistos."
-        )
-    with mc_c4:
-        tipo_flujo_mc = st.selectbox(
-            "Flujo a Simular",
-            ["Flujo de Caja Libre (FCL)", "Flujo Inversionista (FCI)"],
-            help="Elige si deseas evaluar el riesgo del proyecto puro (FCL) o el riesgo para el accionista con deuda (FCI)."
-        )
-        semilla_mc = st.number_input(
-            "Iteraciones", value=10000, min_value=1000, max_value=50000, step=1000,
-            help="Número de escenarios aleatorios evaluados mediante distribución triangular año a año."
-        )
-
-    es_fci_mc = "Inversionista" in tipo_flujo_mc
-    n_iter = int(semilla_mc)
-    tasa_mc = tasa_ke if es_fci_mc else tasa_fcl_usada
-
-    # Año 0
-    inv0_mc = -total_inv_neta + (monto_credito if (es_fci_mc and incluir_prestamo_fci0) else 0.0)
-    van_mc = np.full(n_iter, inv0_mc, dtype=float)
-
-    # Simulación año a año rompiendo la linealidad
-    np.random.seed(42)
-    f_ing_min, f_ing_max = min(ing_min_pct, 100.0)/100.0, max(ing_max_pct, 100.01)/100.0
-    f_cv_min, f_cv_max = min(cv_min_pct, 100.0)/100.0, max(cv_max_pct, 100.01)/100.0
-    f_cf_min, f_cf_max = min(cf_min_pct, 100.0)/100.0, max(cf_max_pct, 100.01)/100.0
-
-    for t in range(horizonte):
-        mult_i = np.random.triangular(f_ing_min, 1.0, f_ing_max, n_iter)
-        mult_v = np.random.triangular(f_cv_min, 1.0, f_cv_max, n_iter)
-        mult_f = np.random.triangular(f_cf_min, 1.0, f_cf_max, n_iter)
-
-        ing_sim = ing_series[t] * mult_i
-        cv_sim = cv_series[t] * mult_v
-        cf_sim = cf_series[t] * mult_f
-        int_sim = intereses_anuales[t] if es_fci_mc else 0.0
-
-        bai_sim = ing_sim - cv_sim - cf_sim - dep_anual_total - amort_anual_total - int_sim
-        imp_sim = bai_sim * tasa_imp
-        bdi_sim = bai_sim - imp_sim
-
-        am_deuda_sim = amort_deuda_anuales[t] if es_fci_mc else 0.0
-        resc_sim = (total_rescate_af + total_recup_ct) if t == horizonte - 1 else 0.0
-
-        fn_sim = bdi_sim + dep_anual_total + amort_anual_total - am_deuda_sim + resc_sim
-        van_mc += fn_sim / ((1.0 + tasa_mc) ** (t + 1))
-
-    van_prom_mc = float(van_mc.mean())
-    prob_exito_mc = float((van_mc >= 0).mean() * 100.0)
-    riesgo_dest_mc = 100.0 - prob_exito_mc
-    var_95_mc = float(np.percentile(van_mc, 5))
-
-    k_mc1, k_mc2, k_mc3, k_mc4 = st.columns(4)
-    k_mc1.metric(
-        "VAN Promedio Simulado", f"${van_prom_mc:,.0f}",
-        help="Promedio de riqueza neta creada tras simular los 10.000 escenarios."
-    )
-    k_mc2.metric(
-        "Probabilidad de Éxito (VAN >= 0)", f"{prob_exito_mc:.2f}%",
-        help="Porcentaje de universos simulados en los que el proyecto supera la tasa exigida."
-    )
-    k_mc3.metric(
-        "Riesgo Destrucción Valor", f"{riesgo_dest_mc:.2f}%",
-        help="Porcentaje de escenarios donde el VAN resulta negativo."
-    )
-    k_mc4.metric(
-        "VaR 95% (Percentil 5%)", f"${var_95_mc:,.0f}",
-        help="Valor en Riesgo: Con un 95% de confianza, el VAN no caerá por debajo de este monto."
-    )
-
-    # Histograma de frecuencias compatible sin requerir librerías externas
-    conteos, bordes = np.histogram(van_mc, bins=35)
-    etiquetas_bins = [f"${(bordes[i]+bordes[i+1])/2000000:,.1f}M" for i in range(len(conteos))]
-    df_hist = pd.DataFrame({
-        "Rango VAN ($ Millones)": etiquetas_bins,
-        "Frecuencia (Escenarios)": conteos
-    }).set_index("Rango VAN ($ Millones)")
-    st.bar_chart(df_hist, height=260, color="#107c41")
-
-    df_resumen_mc = pd.DataFrame([
-        {
-            "Métrica Monte Carlo": "VAN Promedio Esperado",
-            "Valor ($ / %)": f"${van_prom_mc:,.0f}",
-            "Peor Escenario (Mín)": f"${van_mc.min():,.0f}",
-            "Mejor Escenario (Máx)": f"${van_mc.max():,.0f}",
-            "Percentil 5% (VaR 95%)": f"${var_95_mc:,.0f}",
-            "Mediana (P50)": f"${np.median(van_mc):,.0f}",
-            "Prob. Éxito (%)": f"{prob_exito_mc:.2f}%"
-        }
-    ])
-    st.dataframe(df_resumen_mc, use_container_width=True, hide_index=True)
-
-    st.markdown(
-        f'<div class="nota-celda"><b>Conclusión Estocástica ({tipo_flujo_mc}):</b> Tras evaluar {n_iter:,} escenarios con distribución triangular '
-        f'y tasa de descuento de {tasa_mc*100:.2f}%, el proyecto presenta una probabilidad de éxito comercial de <b>{prob_exito_mc:.2f}%</b> '
-        f'y un VAN medio de <b>${van_prom_mc:,.0f}</b>. En el 5% de los peores escenarios (VaR 95%), el VAN se sitúa en <b>${var_95_mc:,.0f}</b>.</div>',
-        unsafe_allow_html=True
-    )
-
-with tab7:
-    st.caption("Pauta de Auditoría y Resolución: Guía de Análisis - Inversión en Activos Reales")
-    guia_selec = st.selectbox(
-        "Seleccionar Ejercicio de la Guía",
-        [
-            "Ejercicio 7: Auditoría de los 3 Errores del Flujo de Caja (Conservas)",
-            "Ejercicio 8: Proyecto a 10 años (Ampliación, Reemplazo y Costo Hundido)",
-            "Ejercicios 1 al 6: Respuestas Conceptuales y Criterios VAN vs. TIR vs. Payback"
-        ]
-    )
-
-    if "Ejercicio 7" in guia_selec:
-        df_err7 = pd.DataFrame([
-            {
-                "N° Error": "1. Inconsistencia de signos en Egresos, Depreciación e Inversiones",
-                "Evidencia en la Tabla del Asesor": "Materia prima Año 1 (+13.000.000), MOI Años 3-5 (+5.040.000 y +6.500.000), Insumos Años 1, 4 y 5 (+), Gastos Generales (+1.000.000), Depreciación (+4.845.000) e Inversiones Año 0 en Act. Nominales (+1.000.000) y Cap. Trabajo (+1.100.000).",
-                "Justificación Conceptual": "Los costos operativos, la depreciación pre-impuestos y los desembolsos de inversión en el Año 0 son salidas o deducciones y deben llevar signo negativo consistente. Mezclar signos distorsiona la Utilidad Antes de Impuestos y confunde la lectura contable."
-            },
-            {
-                "N° Error": "2. Omisión del reverso de la Depreciación después de impuestos",
-                "Evidencia en la Tabla del Asesor": "Después de la Utilidad Después de Impuestos solo se vuelve a sumar la Amortización (+200.000), pero se omite sumar de vuelta la Depreciación (+4.845.000).",
-                "Justificación Conceptual": "La depreciación no constituye un flujo de salida de efectivo real; solo se resta antes de impuestos para capturar su escudo fiscal. Al no reversarla después de impuestos, se subestima el Flujo de Caja Libre anual en $4.845.000."
-            },
-            {
-                "N° Error": "3. Multiplicación en vez de división por el Factor de Actualización",
-                "Evidencia en la Tabla del Asesor": "En el Año 1 el Flujo de Caja es $6.327.737 y el Flujo Actualizado sube a $7.273.260 (multiplicó 6.327.737 x 1,149425 en vez de dividir).",
-                "Justificación Conceptual": "Por el valor del dinero en el tiempo, un peso futuro vale menos hoy. Para traer flujos futuros a Valor Presente se debe dividir por (1 + r)^t o multiplicar por (1 + r)^(-t). El asesor capitalizó los flujos hacia el futuro en vez de descontarlos."
-            }
-        ])
-        st.dataframe(df_err7, use_container_width=True, hide_index=True)
-        st.markdown(
-            '<div class="nota-celda"><b>Nota práctica:</b> Para ver este flujo corregido y cuadrado al peso, '
-            'selecciona <b>"Caso 3 - Conservas (13M)"</b> en el menú lateral izquierdo y revisa la <b>Hoja1 (FCL)</b>.</div>',
-            unsafe_allow_html=True
-        )
-
-    elif "Ejercicio 8" in guia_selec:
-        # Modelo exacto Ejercicio 8 (10 años, valores netos, tasa 12%, impuesto 15%)
-        cols_e8 = [f"Año {t}" for t in range(11)]
-        ing_e8 = [0] + [25000000]*2 + [30000000]*3 + [36000000]*5
-        cv_fab_e8 = [0] + [-3000000]*5 + [-3420000]*5
-        comis_e8 = [0] + [-500000]*2 + [-600000]*3 + [-720000]*5
-        cf_fab_e8 = [0] + [-2000000]*5 + [-2200000]*5
-        gav_e8 = [0] + [-800000]*5 + [-820000]*5
-        # Depreciación: Obras físicas 60M/20 = 3M (A1-5), +12M/20 = 0.6M -> 3.6M (A6-10)
-        # Máquinas: 48M/10 = 4.8M (A1-5), +8M/10 = 0.8M -> 5.6M (A6-10, reemplazo 10M en A8 mantiene dep 1M/año)
-        dep_e8 = [0] + [-7800000]*5 + [-9200000]*5
-        # Amortización intangibles: Puesta en marcha $1.200.000 (excluye $800.000 de estudio de viabilidad por ser costo hundido) / 5 años = 240.000
-        amo_e8 = [0] + [-240000]*5 + [0]*5
-        vta_maq_e8 = [0]*8 + [2500000] + [0]*2
-        vl_maq_e8 = [0]*8 + [-2000000] + [0]*2
-
-        uai_e8 = [ing_e8[t]+cv_fab_e8[t]+comis_e8[t]+cf_fab_e8[t]+gav_e8[t]+dep_e8[t]+amo_e8[t]+vta_maq_e8[t]+vl_maq_e8[t] for t in range(11)]
-        imp_e8 = [-max(0, uai_e8[t])*0.15 for t in range(11)]
-        udi_e8 = [uai_e8[t]+imp_e8[t] for t in range(11)]
-        rev_dep_e8 = [0] + [-dep_e8[t] for t in range(1, 11)]
-        rev_amo_e8 = [0] + [-amo_e8[t] for t in range(1, 11)]
-        rev_vl_e8 = [0]*8 + [2000000] + [0]*2
-
-        # Inversiones: A0 = -(12M Terreno + 60M Obras + 48M Maq + 1.2M Puesta en Marcha + 2.9M Cap.Trab) = -124.100.000
-        # A5 (fin año 5 para operar año 6) = -(12M Obras + 8M Maq) = -20.000.000 | A8 = -10.000.000 reemplazo maq
-        inv_e8 = [-124100000, 0, 0, 0, 0, -20000000, 0, 0, -10000000, 0, 0]
-        desecho_e8 = [0]*10 + [139117000]
-        rec_ct_e8 = [0]*10 + [2900000]
-
-        fcn_e8 = [udi_e8[t]+rev_dep_e8[t]+rev_amo_e8[t]+rev_vl_e8[t]+inv_e8[t]+desecho_e8[t]+rec_ct_e8[t] for t in range(11)]
-        van_e8, tir_e8, pb_e8, vp_e8, _ = calc_metrics(fcn_e8, 0.12)
-
-        df_e8 = pd.DataFrame(
-            [ing_e8, cv_fab_e8, comis_e8, cf_fab_e8, gav_e8, dep_e8, amo_e8, vta_maq_e8, vl_maq_e8, uai_e8, imp_e8, udi_e8, rev_dep_e8, rev_amo_e8, rev_vl_e8, inv_e8, desecho_e8, rec_ct_e8, fcn_e8, [round(x) for x in vp_e8]],
-            index=[
-                "(+) Ingresos", "(-) Costos Var. Fabricación", "(-) Comisiones (2%)", "(-) Costos Fijos Fab.",
-                "(-) Gastos Adm. y Ventas", "(-) Depreciación", "(-) Amort. Intangibles", "(+) Venta Máquina Usada",
-                "(-) Valor Libro Máquina", "(=) Utilidad Antes Impuestos", "(-) Impuesto (15%)", "(=) Utilidad Neta",
-                "(+) Depreciación", "(+) Amort. Intangibles", "(+) Valor Libro Máquina", "(-) Inversiones (Capex/CT)",
-                "(+) Valor de Desecho", "(+) Recup. Cap. Trabajo", "(=) FLUJO DE CAJA NETO", "Flujo Actualizado (12%)"
-            ],
-            columns=cols_e8
-        )
-        st.dataframe(df_e8.style.format("{:,.0f}"), use_container_width=True, height=420)
-        st.markdown(
-            f'<div class="nota-celda"><b>Resultado Ejercicio 8 (10 años, Tasa 12%, Impuesto 15%):</b> '
-            f'VAN = <b>${van_e8:,.0f}</b> | TIR = <b>{tir_e8*100:.2f}%</b> | Payback = <b>{pb_e8}</b>. '
-            f'<i>Supuesto clave de cátedra:</i> El estudio de viabilidad por $800.000 es un <b>costo hundido</b> (irrelevante para la decisión), '
-            f'por lo que solo se activan y amortizan $1.200.000 de puesta en marcha ($240.000/año durante 5 años).</div>',
-            unsafe_allow_html=True
-        )
-
-    else:
-        df_c1_6 = pd.DataFrame([
-            {"Ejercicio": "1. Presupuesto $500M (Sucursales vs. Automatizar vs. Postergar)", "Respuesta Ejecutiva": "No se puede decidir por intuición. Se debe solicitar FCL proyectado, WACC, VAN, TIR y análisis de sensibilidad de cada opción. Abrir sucursales tiene mayor riesgo de mercado (demanda incierta); automatizar tiene menor riesgo (ahorro de costos controlable). Postergar tiene costo de oportunidad."},
-            {"Ejercicio": "2. Clasificación de Proyectos", "Respuesta Ejecutiva": "Sustituir máquina: Reemplazo/Reducción de costos | Filtros ambientales: Obligatorio/Normativo (no rentable por sí mismo) | Operaciones en Perú: Expansión geográfica/Nuevos mercados | Casino trabajadores: Bienestar/Indirecto | Línea vegana: Expansión de nuevos productos."},
-            {"Ejercicio": "3. Proyecto A (VAN $35M, TIR 18%) vs. Proyecto B (VAN $22M, TIR 24%)", "Respuesta Ejecutiva": "Ambos son aceptables (VAN > 0 y TIR > 14% exigido). Si son mutuamente excluyentes, el accionista debe elegir el Proyecto A porque maximiza la riqueza neta en pesos hoy ($35M > $22M). VAN y TIR difieren por el perfil temporal de los flujos y la tasa de reinversión implícita."},
-            {"Ejercicio": "4. Máquina A (VAN $120M, TIR 17%, PB 3a) vs. Máquina B (VAN $90M, TIR 24%, PB 2a)", "Respuesta Ejecutiva": "Escoger Máquina A: aporta $30.000.000 adicionales de valor neto para la empresa. La Máquina B recupera antes (2 años) pero genera menos riqueza total durante su vida útil."},
-            {"Ejercicio": "5. Nueva Planta bajo Incertidumbre (30% $250M, 50% $100M, 20% -$80M)", "Respuesta Ejecutiva": "E(VAN) = 0,3(250M) + 0,5(100M) + 0,2(-80M) = $109.000.000. Se recomienda invertir porque el valor esperado es ampliamente positivo, pero existe un 20% de probabilidad de destruir valor (-$80M). Mitigación: contratos de preventa, inversión modular por etapas o flexibilidad operativa."},
-            {"Ejercicio": "6. Proyecto VAN $150M, TIR 15%, WACC 10%, Payback 7 años (Política máx. 5 años)", "Respuesta Ejecutiva": "No debe rechazarse automáticamente. El proyecto crea $150M de riqueza neta y rinde 5 puntos sobre el WACC (15% > 10%). Usar solo el Payback ignora todos los flujos posteriores al año 5 y castiga proyectos estratégicos de maduración larga."}
-        ])
-        st.dataframe(df_c1_6, use_container_width=True, hide_index=True)
 
 # Script para ocultar elementos externos de Streamlit Cloud (corona roja, foto y barra inferior)
 components.html(
