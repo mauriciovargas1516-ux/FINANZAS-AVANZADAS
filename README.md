@@ -1,8 +1,11 @@
-# Simulador de Finanzas Avanzadas y Evaluacion de Activos Reales
+# 💹 Simulador de Finanzas Avanzadas y Evaluación de Activos Reales
 
-Aplicacion web interactiva desarrollada en Python y Streamlit para la modelacion de presupuestos de capital, evaluacion de proyectos corporativos, analisis de estructura de financiamiento y simulacion estocastica de riesgo.
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)
+[![Lanzar Simulador en Streamlit](https://img.shields.io/badge/🚀_ABRIR_SIMULADOR_FINANCIERO_EN_STREAMLIT-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://github.com/mauriciovargas1516-ux/FINANZAS-AVANZADAS-2026)
 
-El sistema cuenta con una interfaz visual inspirada en una hoja de calculo financiera y permite exportar todos los modelos calculados a un archivo Excel (`Libro1.xlsx`) de 6 hojas con formulas dinamicas nativas.
+👉 **Acceso directo al simulador financiero en vivo:**  
+🔗 **[https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)**
 
 ---
 
