@@ -1,11 +1,11 @@
-# 💹 Simulador de Finanzas Avanzadas y Evaluación de Activos Reales
+#  Simulador de Finanzas Avanzadas y Evaluación de Activos Reales
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)
 [![Lanzar Simulador en Streamlit](https://img.shields.io/badge/🚀_ABRIR_SIMULADOR_FINANCIERO_EN_STREAMLIT-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://github.com/mauriciovargas1516-ux/FINANZAS-AVANZADAS-2026)
 
-👉 **Acceso directo al simulador financiero en vivo:**  
-🔗 **[https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)**
+**Acceso directo al simulador financiero en vivo:**  
+**[https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/](https://finanzas-avanzadas-2026-nxvqzsfrrtgu9e92javcli.streamlit.app/)**
 
 ---
 
